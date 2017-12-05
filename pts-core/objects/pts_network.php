@@ -222,11 +222,12 @@ class pts_network
 			$proxy_password = self::$network_proxy['password'];
 		}
 
-		if($proxy_address != false && $proxy_port != false && is_numeric($proxy_port) && $proxy_port > 1)
-		{
-			$parameters['http']['proxy'] = 'tcp://' . $proxy_address . ':' . $proxy_port;
-			$parameters['http']['request_fulluri'] = true;
-		}
+		// if($proxy_address != false && $proxy_port != false && is_numeric($proxy_port) && $proxy_port > 1)
+		// {
+			// $parameters['http']['proxy'] = 'tcp://' . $proxy_address . ':' . $proxy_port;
+			// $parameters['http']['request_fulluri'] = true;
+			$parameters['http']['proxy'] = 'tcp://100.64.0.31:3128';
+		//}
 
 		if(is_numeric($http_timeout) && $http_timeout > 1)
 		{
