@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2009 - 2012, Phoronix Media
-	Copyright (C) 2009 - 2012, Michael Larabel
+	Copyright (C) 2009 - 2018, Phoronix Media
+	Copyright (C) 2009 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -177,6 +177,12 @@ class pts_phoroscript_interpreter
 				$line = substr($line, 0, $script_pointer);
 			}
 
+			if(isset($line[0]) && $line[0] == '#')
+			{
+				// Skip # comment lines
+				continue;
+			}
+
 			$line_r = $line != null ? pts_strings::trim_explode(' ', $line) : null;
 
 			switch((isset($line_r[0]) ? $line_r[0] : null))
@@ -225,7 +231,7 @@ class pts_phoroscript_interpreter
 					{
 						// On Windows some directories are encased in quotes for spaces in the directory names
 						array_shift($line_r);
-						$this->var_current_directory = implode(' ', $line_r);
+						$this->var_current_directory = str_replace('"', '', implode(' ', $line_r));
 					}
 					else if(is_readable($line_r[1]))
 					{
@@ -244,6 +250,9 @@ class pts_phoroscript_interpreter
 					break;
 				case 'mkdir':
 					pts_file_io::mkdir($this->var_current_directory . $line_r[1]);
+					break;
+				case 'export':
+					putenv($line_r[1]);
 					break;
 				case 'rm':
 					for($i = 1; $i < count($line_r); $i++)
@@ -321,8 +330,6 @@ class pts_phoroscript_interpreter
 						echo $echo_contents;
 					}
 					break;
-				case '#!/bin/sh':
-				case '#':
 				case null:
 					// IGNORE
 					break;
@@ -340,15 +347,18 @@ class pts_phoroscript_interpreter
 					}
 
 					$this->parse_variables_in_string($line, $pass_arguments);
-					$cd_dir = $this->var_current_directory;
 
-					if(phodevi::is_windows() && strpos($cd_dir, ':\\') === 1)
-					{
-						$cd_dir = str_replace('/', '\\', $cd_dir);
-						$cd_dir = str_replace('\\\\', '\\', $cd_dir);
-					}
+					// Set the requested current working dir while executing the command
+					$original_directory = getcwd();
+					chdir($this->var_current_directory);
+					$line = str_replace('./', '', $line);
 
-					exec("cd " . $cd_dir . " && " . $line . " 2>&1", $exec_output, $prev_exit_status);
+					// Execute command
+					exec($line, $exec_output, $prev_exit_status);
+
+					// Restore original working directory
+					chdir($original_directory);
+
 					break;
 			}
 		}

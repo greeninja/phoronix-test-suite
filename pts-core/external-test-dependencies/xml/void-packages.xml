@@ -46,7 +46,7 @@
 		</Package>
 		<Package>
 			<GenericName>build-utilities</GenericName>
-			<PackageName>gcc gcc-c++ autoconf make libgomp-devel automake</PackageName>
+			<PackageName>gcc autoconf make libgomp-devel automake</PackageName>
 		</Package>
 		<Package>
 			<GenericName>cairo-development</GenericName>
@@ -79,6 +79,10 @@
 		<Package>
 			<GenericName>maven</GenericName>
 			<PackageName>maven</PackageName>
+		</Package>
+		<Package>
+			<GenericName>meson</GenericName>
+			<PackageName>meson</PackageName>
 		</Package>
 		<Package>
 			<GenericName>portaudio-development</GenericName>
@@ -122,7 +126,7 @@
 		</Package>
 		<Package>
 			<GenericName>pcre</GenericName>
-			<PackageName>libpcre</PackageName>
+			<PackageName>libpcre pcre</PackageName>
 		</Package>
 		<Package>
 			<GenericName>perl</GenericName>

@@ -1,5 +1,25 @@
 # Phoronix Test Suite Release History
 
+Phoronix Test Suite 7.8
+======
+#### Release Date: 14 February 2018 | Codename: Folldal
+* Allow tests not part of OpenBenchmarking.org to be automatically cloned from a connected Phoromatic Server when needed
+* Improved reporting around deprecated/experimental/broken test profiles
+* New sub-commands `phoronix-test-suite search` and `phoronix-test-suite dump-phodevi-properties`
+* Reworked Phodevi property handler and other Phodevi improvements
+* Restored support for vertical bar graphs in pts_Graph
+* Spectre and Meltdown CPU vulnerability reporting
+
+
+Phoronix Test Suite 7.6
+======
+#### Release Date: 7 December 2017 | Codename: Alvdal
+* Significant BSD operating system support improvements
+* Official macOS High Sierra support
+* Various portability updates
+* External dependency updates, initial support for LEDE and MidnightBSD
+* Phodevi improvements: gpu.memory-usage and memory.temp sensors, various hardware/software detection improvements
+
 Phoronix Test Suite 7.4
 ======
 #### Release Date: 19 September 2017 | Codename: Tynset

@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2017, Phoronix Media
-	Copyright (C) 2008 - 2017, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 	phodevi_disk.php: The PTS Device Interface object for the system disk(s)
 
 	This program is free software; you can redistribute it and/or modify
@@ -23,39 +23,15 @@
 
 class phodevi_disk extends phodevi_device_interface
 {
-	public static function read_property($identifier)
+	public static function properties()
 	{
-		switch($identifier)
-		{
-			case 'identifier':
-				$property = new phodevi_device_property('hdd_string', phodevi::smart_caching);
-				break;
-			case 'scheduler':
-				$property = new phodevi_device_property('hdd_scheduler', phodevi::no_caching);
-				break;
-			case 'mount-options':
-				$property = new phodevi_device_property('proc_mount_options', phodevi::no_caching);
-				break;
-			case 'mount-options-string':
-				$property = new phodevi_device_property('proc_mount_options_string', phodevi::no_caching);
-				break;
-			case 'extra-disk-details':
-				$property = new phodevi_device_property('extra_disk_details', phodevi::no_caching);
-				break;
-		}
-
-		return $property;
-	}
-	public static function device_notes()
-	{
-		$notes = array();
-
-		if(($disk_scheduler = phodevi::read_property('disk', 'scheduler')) != null)
-		{
-			array_push($notes, 'Disk Scheduler: ' . $disk_scheduler);
-		}
-
-		return $notes;
+		return array(
+			'identifier' => new phodevi_device_property('hdd_string', phodevi::smart_caching),
+			'scheduler' => new phodevi_device_property('hdd_scheduler', phodevi::no_caching),
+			'mount-options' => new phodevi_device_property('proc_mount_options', phodevi::no_caching),
+			'mount-options-string' => new phodevi_device_property('proc_mount_options_string', phodevi::no_caching),
+			'extra-disk-details' => new phodevi_device_property('extra_disk_details', phodevi::no_caching)
+			);
 	}
 	public static function proc_mount_options($mount_point = null, $mounts = null)
 	{
@@ -230,7 +206,7 @@ class phodevi_disk extends phodevi_device_interface
 			$disks_formatted = array();
 			$disks = array();
 
-			foreach(array_merge(pts_file_io::glob('/sys/block/sd*'), pts_file_io::glob('/sys/block/mmcblk*'), pts_file_io::glob('/sys/block/nvme*')) as $sdx)
+			foreach(array_merge(pts_file_io::glob('/sys/block/sd*'), pts_file_io::glob('/sys/block/mmcblk*'), pts_file_io::glob('/sys/block/nvme*'), pts_file_io::glob('/sys/block/vd*')) as $sdx)
 			{
 				if(strpos($sdx, 'boot') !== false)
 				{
@@ -286,6 +262,17 @@ class phodevi_disk extends phodevi_device_interface
 					array_push($disks, $disk);
 				}
 			}
+		}
+		else if(phodevi::is_windows())
+		{
+ 			$models = phodevi_windows_parser::get_wmi_object_multi('Win32_DiskDrive', 'Model');
+ 			$size = phodevi_windows_parser::get_wmi_object_multi('Win32_DiskDrive', 'Size');
+			for($i = 0; $i < count($models) && $i < count($size); $i++)
+			{
+				$s = $size[$i] / 1073741824;
+				$models[$i] = round($s) . 'GB ' . $models[$i];
+			}
+			$disks = $models;
 		}
 
 		if(count($disks) == 0)

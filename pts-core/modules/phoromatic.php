@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2009 - 2016, Phoronix Media
-	Copyright (C) 2009 - 2016, Michael Larabel
+	Copyright (C) 2009 - 2018, Phoronix Media
+	Copyright (C) 2009 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -84,7 +84,8 @@ class phoromatic extends pts_module_interface
 		phoromatic_server::prepare_database();
 		$root_admin_pw = phoromatic_server::read_setting('root_admin_pw');
 
-		if($root_admin_pw != null)
+		// DISABLED THE INITIAL CHECKING CODE SINCE REALLY WAS SILLY SINCE IF THEY ALREADY HAVE TERMINAL ACCESS, THEY CAN ACCESS FILE ANYWAY....
+		if(false && $root_admin_pw != null)
 		{
 			do
 			{
@@ -231,10 +232,7 @@ class phoromatic extends pts_module_interface
 				switch($server_response['phoromatic']['tick_thread'])
 				{
 					case 'reboot':
-						if(pts_client::executable_in_path('reboot'))
-						{
-							shell_exec('reboot');
-						}
+						phodevi::reboot();
 						break;
 					case 'halt-testing':
 						touch(PTS_USER_PATH . 'halt-testing');
@@ -471,11 +469,7 @@ class phoromatic extends pts_module_interface
 		{
 			if(getenv('PTS_NO_REBOOT_ON_NETWORK_FAILURE') == false && PTS_IS_DAEMONIZED_SERVER_PROCESS)
 			{
-				if(pts_client::executable_in_path('reboot'))
-				{
-					shell_exec('reboot');
-					sleep(5);
-				}
+				phodevi::reboot();
 			}
 
 			return false;
@@ -512,10 +506,9 @@ class phoromatic extends pts_module_interface
 					}
 					else if(PTS_IS_DAEMONIZED_SERVER_PROCESS && $times_failed > 10)
 					{
-						if(getenv('PTS_NO_REBOOT_ON_NETWORK_FAILURE') == false && pts_client::executable_in_path('reboot'))
+						if(getenv('PTS_NO_REBOOT_ON_NETWORK_FAILURE') == false)
 						{
-							shell_exec('reboot');
-							sleep(5);
+							phodevi::reboot();
 						}
 					}
 				}
@@ -570,6 +563,7 @@ class phoromatic extends pts_module_interface
 					$just_started = false;
 				}
 
+				pts_tests::clear_extra_env_vars();
 				if(isset($json['phoromatic']['pre_set_sys_env_vars']) && !empty($json['phoromatic']['pre_set_sys_env_vars']))
 				{
 					// pre_set_sys_env_vars was added during PTS 5.8 development
@@ -580,6 +574,7 @@ class phoromatic extends pts_module_interface
 						if(count($var) == 2)
 						{
 							putenv($var[0] . '=' . $var[1]);
+							pts_tests::add_extra_env_var($var[0], $var[1]);
 						}
 					}
 				}
@@ -715,11 +710,7 @@ class phoromatic extends pts_module_interface
 					case 'reboot':
 						echo PHP_EOL . 'Phoromatic received a remote command to reboot.' . PHP_EOL;
 						phoromatic::update_system_status('Attempting System Reboot');
-						if(pts_client::executable_in_path('reboot'))
-						{
-							shell_exec('reboot');
-							sleep(5);
-						}
+						phodevi::reboot();
 						break;
 					case 'shutdown-if-supports-wake':
 						$supports_wol = false;
@@ -742,17 +733,7 @@ class phoromatic extends pts_module_interface
 
 						echo PHP_EOL . 'Phoromatic received a remote command to shutdown.' . PHP_EOL;
 						phoromatic::update_system_status('Attempting System Shutdown');
-						if(pts_client::executable_in_path('systemctl') && rand(0, 1) == 1) // some systems like systemctl poweroff, others just like poweroff, but not consistent one method for all systems in testing
-						{
-							// Try systemd's poweroff method first
-							shell_exec('systemctl poweroff');
-							sleep(5);
-						}
-						if(pts_client::executable_in_path('poweroff'))
-						{
-							shell_exec('poweroff');
-							sleep(5);
-						}
+						phodevi::shutdown();
 						break;
 					case 'maintenance':
 						echo PHP_EOL . 'Idling, system maintenance mode set by Phoromatic Server.' . PHP_EOL;

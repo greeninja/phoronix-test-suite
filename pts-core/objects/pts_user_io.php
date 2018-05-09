@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2017, Phoronix Media
-	Copyright (C) 2008 - 2017, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -42,12 +42,12 @@ class pts_user_io
 		do
 		{
 			echo PHP_EOL . pts_client::cli_just_bold($question . ': ');
-			if($password && pts_client::executable_in_path('stty'))
+			if($password && pts_client::executable_in_path('stty') && !phodevi::is_windows())
 			{
 				system('stty -echo');
 			}
 			$answer = pts_user_io::read_user_input();
-			if($password && pts_client::executable_in_path('stty'))
+			if($password && pts_client::executable_in_path('stty') && !phodevi::is_windows())
 			{
 				system('stty echo');
 			}
@@ -77,6 +77,30 @@ class pts_user_io
 		}
 
 		return $list;
+	}
+	public static function display_packed_list(&$list)
+	{
+		$terminal_width = pts_client::terminal_width();
+		$longest_item = 0;
+		foreach($list as &$item)
+		{
+			if(isset($item[$longest_item + 1]))
+			{
+				$longest_item = strlen($item);
+			}
+		}
+
+		$items_per_line = floor($terminal_width / ($longest_item + 1));
+		$i = 0;
+		foreach($list as &$item)
+		{
+			echo $item . str_repeat(' ', $longest_item - strlen($item) + 1);
+			$i++;
+			if($i % $items_per_line == 0)
+			{
+				echo PHP_EOL;
+			}
+		}
 	}
 	public static function display_text_table(&$table, $prepend_to_lines = null, $extra_width_to_column = 0, $min_width = 0)
 	{
@@ -128,26 +152,41 @@ class pts_user_io
 
 			$answer = pts_strings::string_bool($auto_answer);
 		}*/
-		$question .= ' (' . ($default == true ? 'Y/n' : 'y/N') . '): ';
+		if($default === true)
+		{
+			$def = 'Y/n';
+		}
+		else if($default === false)
+		{
+			$def = 'y/N';
+		}
+		else
+		{
+			$def = 'y/n';
+		}
 
+		$question .= ' (' . $def . '): ';
+
+		$answer = -1;
 		do
 		{
 			pts_client::$display->generic_prompt(pts_client::cli_just_bold($question));
 			$input = strtolower(pts_user_io::read_user_input());
+			switch($input)
+			{
+				case 'y':
+					$answer = true;
+					break;
+				case 'n':
+					$answer = false;
+					break;
+				default:
+					$answer = $default;
+					break;
+			}
 		}
-		while($input != 'y' && $input != 'n' && $input != '');
-		switch($input)
-		{
-			case 'y':
-				$answer = true;
-				break;
-			case 'n':
-				$answer = false;
-				break;
-			default:
-				$answer = $default;
-				break;
-		}
+		while($answer === -1);
+
 		return $answer;
 	}
 	public static function prompt_text_menu($user_string, $options_r, $allow_multi_select = false, $return_index = false, $line_prefix = null)
@@ -175,13 +214,13 @@ class pts_user_io
 
 			foreach(($allow_multi_select ? pts_strings::comma_explode($select_choice) : array($select_choice)) as $choice)
 			{
-				if(in_array($choice, $options_r))
-				{
-					$select[] = array_search($choice, $options_r);
-				}
-				else if(isset($key_index[$choice]))
+				if(isset($key_index[$choice]))
 				{
 					$select[] = $key_index[$choice];
+				}
+				else if(in_array($choice, $options_r))
+				{
+					$select[] = array_search($choice, $options_r);
 				}
 				else if($allow_multi_select && strpos($choice, '-') !== false)
 				{

@@ -128,6 +128,12 @@
 			<FileCheck>maven OR mvn</FileCheck>
 		</Package>
 		<Package>
+			<GenericName>meson</GenericName>
+			<Title>Meson Build System</Title>
+			<PossibleNames>meson</PossibleNames>
+			<FileCheck>meson</FileCheck>
+		</Package>
+		<Package>
 			<GenericName>portaudio-development</GenericName>
 			<Title>PortAudio Development Files</Title>
 			<PossibleNames>libportaudio-dev, portaudio-devel</PossibleNames>
@@ -411,6 +417,12 @@
 			<FileCheck>suitesparse/cs.h OR cs.h, libcxsparse.so</FileCheck>
 		</Package>
 		<Package>
+			<GenericName>rust</GenericName>
+			<Title>Rust</Title>
+			<PossibleNames>rust, rustc, cargo</PossibleNames>
+			<FileCheck>rustc, cargo</FileCheck>
+		</Package>
+		<Package>
 			<GenericName>dune</GenericName>
 			<Title>Distributed and Unified Numerics Environment</Title>
 			<PossibleNames>libdune-common-dev</PossibleNames>
@@ -453,6 +465,12 @@
 			<FileCheck>opencv/cv.h OR opencv2/core.hpp</FileCheck>
 		</Package>
 		<Package>
+			<GenericName>steam</GenericName>
+			<Title>Steam</Title>
+			<PossibleNames>steam</PossibleNames>
+			<FileCheck>steam</FileCheck>
+		</Package>
+		<Package>
                         <GenericName>perl-digest-md5</GenericName>
                         <Title>Perl interface to the MD5 Algorithm</Title>
                         <PossibleNames>perl-Digest-MD5, perl-Digest-Perl-MD5, libdigest-md5</PossibleNames>
@@ -469,6 +487,18 @@
 			<Title>Python Sklearn</Title>
 			<PossibleNames>python-sklearn</PossibleNames>
 			<FileCheck>/usr/lib/python2.7/dist-packages/scikit_learn-0.17.egg-info</FileCheck>
+		</Package>
+		<Package>
+			<GenericName>V8</GenericName>
+			<Title>V8 JavaScript Engine</Title>
+			<PossibleNames>libv8-dev, v8</PossibleNames>
+			<FileCheck>v8.h, libv8.so</FileCheck>
+		</Package>
+		<Package>
+			<GenericName>Ruby</GenericName>
+			<Title>Ruby</Title>
+			<PossibleNames>ruby</PossibleNames>
+			<FileCheck>ruby</FileCheck>
 		</Package>
 	</ExternalDependencies>
 </PhoronixTestSuite>

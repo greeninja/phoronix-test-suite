@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2016, Phoronix Media
-	Copyright (C) 2008 - 2016, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -395,13 +395,13 @@ class pts_test_profile_parser
 	}
 	public function requires_core_version_max()
 	{
-		return $this->xg('TestProfile/RequiresCoreVersionMax', 9190);
+		return $this->xg('TestProfile/RequiresCoreVersionMax', 9990);
 	}
 	public function get_test_option_objects($auto_process = true)
 	{
 		$test_options = array();
 
-		if($this->xml->TestSettings && $this->xml->TestSettings->Option)
+		if($this->xml && $this->xml->TestSettings && $this->xml->TestSettings->Option)
 		{
 			foreach($this->xml->TestSettings->Option as $option)
 			{

@@ -3,8 +3,8 @@
 #
 #	Phoronix Test Suite
 #	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-#	Copyright (C) 2008 - 2017, Phoronix Media
-#	Copyright (C) 2008 - 2017, Michael Larabel
+#	Copyright (C) 2008 - 2018, Phoronix Media
+#	Copyright (C) 2008 - 2018, Michael Larabel
 #	phoronix-test-suite: The Phoronix Test Suite is an extensible open-source testing / benchmarking platform
 #
 #	This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,12 @@
 # export PTS_DIR=$(readlink -f `dirname $0`)
 export PTS_DIR=`pwd`
 export PTS_MODE="CLIENT"
+if which realpath >/dev/null 2>&1 ;
+then
+	export PTS_LAUNCHER=`realpath $0`
+else
+	export PTS_LAUNCHER="$PTS_DIR/phoronix-test-suite"
+fi
 
 if [ $PTS_DIR != "`pwd`" ]
 then
@@ -135,7 +141,7 @@ elif [ -x /usr/bin/yum ]
 then
 	# Red Hat / Fedora / etc
 	echo "The command to likely run for your operating system is: "
-	echo "# yum install php-cli php-xml"
+	echo "# yum install php-cli php-xml php-json"
 	echo " "
 elif [ -x /usr/bin/pkg_radd ]
 then
@@ -153,7 +159,7 @@ elif [ -x /usr/local/sbin/pkg ] || [ -x /usr/sbin/pkg ]
 then
 	# DragonFlyBSD and others
 	echo "The command to likely run for your operating system is: "
-	echo "# pkg install php70 php70-dom php70-zip php70-json php70-simplexml"
+	echo "# pkg install php72 php72-dom php72-zip php72-json php72-simplexml php72-openssl"
 	echo " "
 elif [ -x /usr/local/swupd ]
 then
@@ -247,6 +253,10 @@ fi
 case "$1" in
 "test-module" | "debug-module" | "webui")
 	export PTS_IGNORE_MODULES=1
+	;;
+"debug-self-test")
+	export PTS_IGNORE_MODULES=1
+	export PTS_SILENT_MODE=1
 	;;
 "enterprise-setup")
 	export PTS_SILENT_MODE=1

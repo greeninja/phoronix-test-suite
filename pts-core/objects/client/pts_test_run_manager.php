@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2009 - 2017, Phoronix Media
-	Copyright (C) 2009 - 2017, Michael Larabel
+	Copyright (C) 2009 - 2018, Phoronix Media
+	Copyright (C) 2009 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -448,7 +448,7 @@ class pts_test_run_manager
 			{
 				$subsystem_name = pts_strings::trim_search_query($components[$subsystem]);
 
-				if(phodevi::is_vendor_string($subsystem_name) && !in_array($subsystem_name, $subsystem_r))
+				if(!empty($subsystem_name) && phodevi::is_vendor_string($subsystem_name) && !in_array($subsystem_name, $subsystem_r))
 				{
 					$subsystem_r[] = $subsystem_name;
 				}
@@ -705,6 +705,10 @@ class pts_test_run_manager
 		{
 			$json_report_attributes['max-result'] = $t;
 		}
+		if(!empty($test_run_request->test_run_times))
+		{
+			$json_report_attributes['test-run-times'] = implode(':', $test_run_request->test_run_times);
+		}
 
 		return $json_report_attributes;
 	}
@@ -773,7 +777,7 @@ class pts_test_run_manager
 				$this->result_file->set_preset_environment_variables($this->get_preset_environment_variables());
 
 				// TODO XXX JSON In null and notes
-				$sys = new pts_result_file_system($this->results_identifier, phodevi::system_hardware(true), phodevi::system_software(true), $this->generate_json_system_attributes(), pts_client::current_user(), pts_test_notes_manager::generate_test_notes($this->tests_to_run), date('Y-m-d H:i:s'), PTS_VERSION);
+				$sys = new pts_result_file_system($this->results_identifier, phodevi::system_hardware(true), phodevi::system_software(true), $this->generate_json_system_attributes(), pts_client::current_user(), null, date('Y-m-d H:i:s'), PTS_VERSION);
 				$this->result_file->add_system($sys);
 			}
 
@@ -816,7 +820,7 @@ class pts_test_run_manager
 				}
 			}
 		}
-		if($show_all || in_array('OpenCL', $test_internal_tags))
+		if($show_all || in_array('OpenCL', $test_internal_tags) || in_array('opencl', $test_external_dependencies))
 		{
 			// So OpenCL tests were run....
 			$gpu_compute_cores = phodevi::read_property('gpu', 'compute-cores');
@@ -881,14 +885,32 @@ class pts_test_run_manager
 			}
 		}
 
-		if(phodevi::read_property('system', 'kernel-parameters'))
+		if($show_all || phodevi::read_property('system', 'kernel-parameters'))
 		{
 			$notes['kernel-parameters'] = phodevi::read_property('system', 'kernel-parameters');
 		}
 
-		if(phodevi::read_property('system', 'environment-variables'))
+		if($show_all || phodevi::read_property('system', 'environment-variables'))
 		{
 			$notes['environment-variables'] = phodevi::read_property('system', 'environment-variables');
+		}
+		if($show_all || in_array('Java', $test_internal_tags) || in_array('java', $test_external_dependencies))
+		{
+			$notes['java'] = phodevi::read_property('system', 'java-version');
+		}
+		if($show_all || in_array('Python', $test_internal_tags) || in_array('python', $test_external_dependencies))
+		{
+			$notes['python'] = phodevi::read_property('system', 'python-version');
+		}
+
+		$notes['security'] = phodevi::read_property('system', 'security-features');
+
+		foreach($notes as $key => $value)
+		{
+			if(empty($value))
+			{
+				unset($notes[$key]);
+			}
 		}
 
 		return $notes;
@@ -927,7 +949,7 @@ class pts_test_run_manager
 				}
 				else
 				{
-					if((pts_client::read_env('DISPLAY') == false && pts_client::read_env('WAYLAND_DISPLAY') == false) && !defined('PHOROMATIC_PROCESS'))
+					if((pts_client::read_env('DISPLAY') == false && pts_client::read_env('WAYLAND_DISPLAY') == false && !phodevi::is_windows()) && !defined('PHOROMATIC_PROCESS'))
 					{
 						$txt_results = pts_user_io::prompt_bool_input('Do you want to view the text results of the testing', true);
 						if($txt_results)
@@ -954,7 +976,7 @@ class pts_test_run_manager
 				}
 				else if(!$this->auto_mode)
 				{
-					$upload_results = pts_user_io::prompt_bool_input('Would you like to upload the results to OpenBenchmarking.org', true);
+					$upload_results = pts_user_io::prompt_bool_input('Would you like to upload the results to OpenBenchmarking.org', -1);
 				}
 				else
 				{

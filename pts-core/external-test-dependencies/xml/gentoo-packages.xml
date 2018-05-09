@@ -261,6 +261,14 @@
 			<PackageName>virtual/opencl</PackageName>
 		</Package>
 		<Package>
+			<GenericName>meson</GenericName>
+			<PackageName>dev-util/meson</PackageName>
+		</Package>
+		<Package>
+			<GenericName>rust</GenericName>
+			<PackageName>dev-lang/rust dev-util/cargo</PackageName>
+		</Package>
+		<Package>
 			<GenericName>attr</GenericName>
 			<PackageName>sys-apps/attr</PackageName>
 		</Package>
@@ -291,6 +299,14 @@
 		<Package>
 			<GenericName>python-sklearn</GenericName>
 			<PackageName>sci-libs/scikits_learn</PackageName>
+		</Package>
+		<Package>
+			<GenericName>V8</GenericName>
+			<PackageName>dev-lang/v8</PackageName>
+		</Package>
+		<Package>
+			<GenericName>ruby</GenericName>
+			<PackageName>dev-lang/ruby</PackageName>
 		</Package>
 	</ExternalDependencies>
 </PhoronixTestSuite>

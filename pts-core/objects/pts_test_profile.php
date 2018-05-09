@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2017, Phoronix Media
-	Copyright (C) 2008 - 2017, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ class pts_test_profile extends pts_test_profile_parser
 			$this->set_override_values($override_values);
 		}
 
-		if($normal_init && PTS_IS_CLIENT && is_file($this->get_install_dir() . 'pts-install.xml'))
+		if($normal_init && PTS_IS_CLIENT && $this->identifier != null && is_file($this->get_install_dir() . 'pts-install.xml'))
 		{
 			$this->test_installation = new pts_installed_test($this);
 		}
@@ -42,7 +42,7 @@ class pts_test_profile extends pts_test_profile_parser
 	{
 		$dom = new DOMDocument();
 		$dom->loadXML($this->get_xml());
-		return $dom->schemaValidate(PTS_OPENBENCHMARKING_PATH . 'schemas/test-profile.xsd');
+		return $dom->schemaValidate(pts_openbenchmarking::openbenchmarking_standards_path() . 'schemas/test-profile.xsd');
 	}
 	public static function is_test_profile($identifier)
 	{
@@ -88,7 +88,16 @@ class pts_test_profile extends pts_test_profile_parser
 	{
 		$estimated_size = 0;
 
-		foreach(pts_test_install_request::read_download_object_list($this->identifier) as $download_object)
+		if(PTS_IS_CLIENT)
+		{
+			$downloads = pts_test_install_request::read_download_object_list($this->identifier);
+		}
+		else
+		{
+			$downloads = $this->get_downloads();
+		}
+
+		foreach($downloads as $download_object)
 		{
 			$estimated_size += $download_object->get_filesize();
 		}
@@ -351,9 +360,19 @@ class pts_test_profile extends pts_test_profile_parser
 	{
 		return is_file($this->get_install_dir() . 'pts-install.xml');
 	}
+	public function get_test_executable()
+	{
+		$exe = parent::get_test_executable();
+		if(!is_file($this->get_install_dir() . $exe) && phodevi::is_windows() && is_file($this->get_install_dir() . $exe . '.bat'))
+		{
+			$exe .= '.bat';
+		}
+
+		return $exe;
+	}
 	public function get_install_dir()
 	{
-		return pts_client::test_install_root_path() . $this->identifier . '/';
+		return pts_client::test_install_root_path() . $this->identifier . DIRECTORY_SEPARATOR;
 	}
 	public function get_installer_checksum()
 	{
@@ -425,6 +444,103 @@ class pts_test_profile extends pts_test_profile_parser
 		$file = trim(str_replace('"', "'", $file));
 		$simple_xml = simplexml_load_string($file);
 		return json_encode($simple_xml);
+	}
+	public function get_downloads()
+	{
+		$download_xml_file = $this->get_file_download_spec();
+		$downloads = array();
+		if($download_xml_file != null)
+		{
+			$xml = simplexml_load_file($download_xml_file, 'SimpleXMLElement', LIBXML_COMPACT | LIBXML_PARSEHUGE);
+
+			if($xml->Downloads && $xml->Downloads->Package)
+			{
+				foreach($xml->Downloads->Package as $pkg)
+				{
+					$pkg_url = isset($pkg->URL) ? $pkg->URL->__toString() : null;
+					$pkg_md5 = isset($pkg->MD5) ? $pkg->MD5->__toString() : null;
+					$pkg_sha256 = isset($pkg->SHA256) ? $pkg->SHA256->__toString() : null;
+					$pkg_filename = isset($pkg->FileName) ? $pkg->FileName->__toString() : null;
+					$pkg_filesize = isset($pkg->FileSize) ? $pkg->FileSize->__toString() : null;
+					$pkg_architecture = isset($pkg->ArchitectureSpecific) ? $pkg->ArchitectureSpecific->__toString() : null;
+					$pkg_platforms = isset($pkg->PlatformSpecific) ? $pkg->PlatformSpecific->__toString() : null;
+					$downloads[] = new pts_test_file_download($pkg_url, $pkg_filename, $pkg_filesize, $pkg_md5, $pkg_sha256, $pkg_platforms, $pkg_architecture);
+				}
+			}
+		}
+
+		return $downloads;
+	}
+	public function get_results_definition($limit = null)
+	{
+		$results_definition_file = $this->get_file_parser_spec();
+		$results_definition = new pts_test_profile_results_definition();
+		if($results_definition_file != null)
+		{
+			$xml = simplexml_load_file($results_definition_file, 'SimpleXMLElement', LIBXML_COMPACT | LIBXML_PARSEHUGE);
+
+			if($xml->SystemMonitor && ($limit == null || $limit == 'SystemMonitor'))
+			{
+				foreach($xml->SystemMonitor as $i)
+				{
+					$s = isset($i->Sensor) ? $i->Sensor->__toString() : null;
+					$p = isset($i->PollingFrequency) ? $i->PollingFrequency->__toString() : null;
+					$r = isset($i->Report) ? $i->Report->__toString() : null;
+					$results_definition->add_system_monitor_definition($s, $p, $r);
+				}
+			}
+			if($xml->ExtraData && ($limit == null || $limit == 'ExtraData'))
+			{
+				foreach($xml->ExtraData as $i)
+				{
+					$results_definition->add_extra_data_definition((isset($i->Identifier) ? $i->Identifier->__toString() : null));
+				}
+			}
+			if($xml->ImageParser && ($limit == null || $limit == 'ImageParser'))
+			{
+				foreach($xml->ImageParser as $i)
+				{
+					$s = isset($i->SourceImage) ? $i->SourceImage->__toString() : null;
+					$m = isset($i->MatchToTestArguments) ? $i->MatchToTestArguments->__toString() : null;
+					$x = isset($i->ImageX) ? $i->ImageX->__toString() : null;
+					$y = isset($i->ImageY) ? $i->ImageY->__toString() : null;
+					$w = isset($i->ImageWidth) ? $i->ImageWidth->__toString() : null;
+					$h = isset($i->ImageHeight) ? $i->ImageHeight->__toString() : null;
+					$results_definition->add_image_parser_definition($s, $m, $x, $y, $w, $h);
+				}
+			}
+			if($xml->ResultsParser && ($limit == null || $limit == 'ResultsParser'))
+			{
+				foreach($xml->ResultsParser as $i)
+				{
+					$ot = isset($i->OutputTemplate) ? $i->OutputTemplate->__toString() : null;
+					$mtta = isset($i->MatchToTestArguments) ? $i->MatchToTestArguments->__toString() : null;
+					$rk = isset($i->ResultKey) ? $i->ResultKey->__toString() : null;
+					$lh = isset($i->LineHint) ? $i->LineHint->__toString() : null;
+					$lbh = isset($i->LineBeforeHint) ? $i->LineBeforeHint->__toString() : null;
+					$lah = isset($i->LineAfterHint) ? $i->LineAfterHint->__toString() : null;
+					$rbs = isset($i->ResultBeforeString) ? $i->ResultBeforeString->__toString() : null;
+					$ras = isset($i->ResultAfterString) ? $i->ResultAfterString->__toString() : null;
+					$sfr = isset($i->StripFromResult) ? $i->StripFromResult->__toString() : null;
+					$srp = isset($i->StripResultPostfix) ? $i->StripResultPostfix->__toString() : null;
+					$mm = isset($i->MultiMatch) ? $i->MultiMatch->__toString() : null;
+					$drb = isset($i->DivideResultBy) ? $i->DivideResultBy->__toString() : null;
+					$mrb = isset($i->MultiplyResultBy) ? $i->MultiplyResultBy->__toString() : null;
+					$rs = isset($i->ResultScale) ? $i->ResultScale->__toString() : null;
+					$rpro = isset($i->ResultProportion) ? $i->ResultProportion->__toString() : null;
+					$rpre = isset($i->ResultPrecision) ? $i->ResultPrecision->__toString() : null;
+					$ad = isset($i->ArgumentsDescription) ? $i->ArgumentsDescription->__toString() : null;
+					$atad = isset($i->AppendToArgumentsDescription) ? $i->AppendToArgumentsDescription->__toString() : null;
+					$ff = isset($i->FileFormat) ? $i->FileFormat->__toString() : null;
+					$tcts = isset($i->TurnCharsToSpace) ? $i->TurnCharsToSpace->__toString() : null;
+					$dob = isset($i->DeleteOutputBefore) ? $i->DeleteOutputBefore->__toString() : null;
+					$doa = isset($i->DeleteOutputAfter) ? $i->DeleteOutputAfter->__toString() : null;
+					$results_definition->add_result_parser_definition($ot, $mtta, $rk, $lh, $lbh, $lah, $rbs, $ras, $sfr, $srp, $mm, $drb, $mrb, $rs, $rpro, $rpre, $ad, $atad, $ff, $tcts, $dob, $doa);
+				}
+			}
+		}
+
+		return $results_definition;
 	}
 }
 

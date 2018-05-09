@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2017, Phoronix Media
-	Copyright (C) 2008 - 2017, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 	pts-core.php: To boot-strap the Phoronix Test Suite start-up
 
 	This program is free software; you can redistribute it and/or modify
@@ -120,9 +120,6 @@ function pts_define_directories()
 
 		pts_define('PTS_USER_PATH', '/var/lib/phoronix-test-suite/');
 		pts_define('PTS_CORE_STORAGE', PTS_USER_PATH . 'core.pt2so');
-		pts_define('PTS_TEMP_STORAGE', PTS_USER_PATH . 'temp.pt2so');
-		pts_define('PTS_MODULE_LOCAL_PATH', PTS_USER_PATH . 'modules/');
-		pts_define('PTS_MODULE_DATA_PATH', PTS_USER_PATH . 'modules-data/');
 		pts_define('PTS_DOWNLOAD_CACHE_PATH', '/var/cache/phoronix-test-suite/download-cache/');
 		pts_define('PTS_OPENBENCHMARKING_SCRATCH_PATH', '/var/cache/phoronix-test-suite/openbenchmarking.org/');
 		pts_define('PTS_TEST_PROFILE_PATH', PTS_USER_PATH . 'test-profiles/');
@@ -130,11 +127,15 @@ function pts_define_directories()
 	}
 	else if(PTS_IS_CLIENT)
 	{
-		pts_define('PTS_USER_PATH', pts_core::user_home_directory() . '.phoronix-test-suite' . DIRECTORY_SEPARATOR);
+		/* if(!is_dir(pts_core::user_home_directory() . '.phoronix-test-suite') && stripos(PHP_OS, 'win') !== false && getenv('AppData'))
+		{
+			pts_define('PTS_USER_PATH', getenv('AppData') . DIRECTORY_SEPARATOR . 'phoronix-test-suite' . DIRECTORY_SEPARATOR);
+		}
+		else
+		{ */
+			pts_define('PTS_USER_PATH', pts_core::user_home_directory() . '.phoronix-test-suite' . DIRECTORY_SEPARATOR);
+		//}
 		pts_define('PTS_CORE_STORAGE', PTS_USER_PATH . 'core.pt2so');
-		pts_define('PTS_TEMP_STORAGE', PTS_USER_PATH . 'temp.pt2so');
-		pts_define('PTS_MODULE_LOCAL_PATH', PTS_USER_PATH . 'modules/');
-		pts_define('PTS_MODULE_DATA_PATH', PTS_USER_PATH . 'modules-data/');
 		pts_define('PTS_DOWNLOAD_CACHE_PATH', PTS_USER_PATH . 'download-cache/');
 		pts_define('PTS_OPENBENCHMARKING_SCRATCH_PATH', PTS_USER_PATH . 'openbenchmarking.org/');
 		pts_define('PTS_TEST_PROFILE_PATH', PTS_USER_PATH . 'test-profiles/');
@@ -154,11 +155,7 @@ function pts_define_directories()
 	}
 
 	// Misc Locations
-	pts_define('PTS_MODULE_PATH', PTS_CORE_PATH . 'modules/');
 	pts_define('PTS_CORE_STATIC_PATH', PTS_CORE_PATH . 'static/');
-	pts_define('PTS_COMMAND_PATH', PTS_CORE_PATH . 'commands/');
-	pts_define('PTS_EXDEP_PATH', PTS_CORE_PATH . 'external-test-dependencies/');
-	pts_define('PTS_OPENBENCHMARKING_PATH', PTS_CORE_PATH . 'openbenchmarking.org/');
 
 	if(is_dir('/usr/local/share/phoronix-test-suite/'))
 	{
@@ -200,7 +197,8 @@ function pts_needed_extensions()
 }
 function pts_version_codenames()
 {
-	// Lots of inspiration for codenames from Norwegian municipalities
+	// Lots of inspiration for codenames often from Norwegian municipalities
+	// https://en.wikipedia.org/wiki/List_of_municipalities_of_Norway
 	return array(
 		// Sør-Trøndelag - Norway
 		'1.0' => 'Trondheim',
@@ -245,12 +243,18 @@ function pts_version_codenames()
 		'7.4' => 'Tynset',
 		'7.6' => 'Alvdal',
 		'7.8' => 'Folldal',
+		// Østfold - Norway
+		'8.0' => 'Aremark',
+		'8.2' => 'Rakkestad',
+		'8.4' => 'Skiptvet',
+		'8.6' => 'Spydeberg',
+		'8.8' => 'Hvaler',
 		);
 }
 
-pts_define('PTS_VERSION', '7.6.0m4');
-pts_define('PTS_CORE_VERSION', 7540);
-pts_define('PTS_CODENAME', 'ALVDAL');
+pts_define('PTS_VERSION', '8.0.0m3');
+pts_define('PTS_CORE_VERSION', 7930);
+pts_define('PTS_CODENAME', 'AREMARK');
 pts_define('PTS_IS_CLIENT', (defined('PTS_MODE') && strstr(PTS_MODE, 'CLIENT') !== false));
 pts_define('PTS_IS_WEB_CLIENT', (defined('PTS_MODE') && PTS_MODE == 'WEB_CLIENT'));
 pts_define('PTS_IS_DEV_BUILD', (substr(PTS_VERSION, -2, 1) == 'm'));
@@ -311,6 +315,11 @@ if(PTS_IS_CLIENT && ini_get('date.timezone') == null)
 	if(is_executable('/bin/date') && function_exists('timezone_name_from_abbr'))
 	{
 		$tz = timezone_name_from_abbr(trim(shell_exec('date +%Z 2> /dev/null')));
+	}
+	else if(strtoupper(substr(PHP_OS, 0, 3)) == 'WIN')
+	{
+		$tz = trim(shell_exec('powershell "(Get-TimeZone).BaseUtcOffset.Hours"'));
+		$tz = is_numeric($tz) ? timezone_name_from_abbr('', ($tz * 60 * 60), 0) : null;
 	}
 
 	if($tz == null || !in_array($tz, timezone_identifiers_list()))

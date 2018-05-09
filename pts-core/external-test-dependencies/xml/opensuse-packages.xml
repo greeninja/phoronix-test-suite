@@ -83,10 +83,6 @@
 			<FileCheck>/usr/lib/jvm/ OR /usr/lib64/jvm/</FileCheck>
 		</Package>
 		<Package>
-			<GenericName>maven</GenericName>
-			<PackageName>maven</PackageName>
-		</Package>
-		<Package>
 			<GenericName>portaudio-development</GenericName>
 			<PackageName>portaudio-devel</PackageName>
 		</Package>
@@ -97,6 +93,10 @@
 		<Package>
 			<GenericName>glew</GenericName>
 			<PackageName>glew-devel</PackageName>
+		</Package>
+		<Package>
+			<GenericName>meson</GenericName>
+			<PackageName>meson</PackageName>
 		</Package>
 		<Package>
 			<GenericName>freeimage</GenericName>
@@ -121,6 +121,10 @@
 		<Package>
 			<GenericName>perl</GenericName>
 			<PackageName>perl</PackageName>
+		</Package>
+		<Package>
+			<GenericName>rust</GenericName>
+			<PackageName>rust cargo</PackageName>
 		</Package>
 		<Package>
 			<GenericName>xorg-video</GenericName>
@@ -236,7 +240,7 @@
 		</Package>
 		<Package>
 			<GenericName>gmp-library</GenericName>
-			<PackageName>libgmp3</PackageName>
+			<PackageName>gmp-devel</PackageName>
 		</Package>
 		<Package>
 			<GenericName>subversion</GenericName>
@@ -292,7 +296,15 @@
                 </Package>
 		<Package>
 			<GenericName>python-scipy</GenericName>
-			<PackageName>python-scipy</PackageName>
+			<PackageName>python2-scipy python3-scipy</PackageName>
+		</Package>
+		<Package>
+			<GenericName>V8</GenericName>
+			<PackageName>v8</PackageName>
+		</Package>
+		<Package>
+			<GenericName>ruby</GenericName>
+			<PackageName>ruby</PackageName>
 		</Package>
 	</ExternalDependencies>
 </PhoronixTestSuite>

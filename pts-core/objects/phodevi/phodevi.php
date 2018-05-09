@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2009 - 2017, Phoronix Media
-	Copyright (C) 2009 - 2017, Michael Larabel
+	Copyright (C) 2009 - 2018, Phoronix Media
+	Copyright (C) 2009 - 2018, Michael Larabel
 	phodevi.php: The object for interacting with the PTS device framework
 
 	This program is free software; you can redistribute it and/or modify
@@ -290,6 +290,7 @@ class phodevi extends phodevi_base
 				),
 			'Graphics' => phodevi::read_name('gpu'),
 				array(
+				'Frequency' => phodevi::read_property('gpu', 'frequency'),
 				'OpenGL' => phodevi::read_property('system', 'opengl-driver'),
 				'Vulkan' => phodevi::read_property('system', 'vulkan-driver'),
 				'OpenCL' => phodevi::read_property('system', 'opencl-driver'),
@@ -299,11 +300,13 @@ class phodevi extends phodevi_base
 				),
 			'Motherboard' => phodevi::read_name('motherboard'),
 				array(
-				'Memory' => phodevi::read_name('memory'),
+				'BIOS Version' => phodevi::read_property('motherboard', 'bios-version'),
 				'Chipset' => phodevi::read_name('chipset'),
-				'Audio' => phodevi::read_name('audoo'),
+				'Audio' => phodevi::read_name('audio'),
 				'Network' => phodevi::read_name('network'),
 				),
+			'Memory' => phodevi::read_name('memory'),
+				array(),
 			'Disk' => phodevi::read_name('disk'),
 				array(
 				'File-System' => phodevi::read_property('system', 'filesystem'),
@@ -318,6 +321,7 @@ class phodevi extends phodevi_base
 				'Display Server' => phodevi::read_property('system', 'display-server'),
 				'Compiler' => phodevi::read_property('system', 'compiler'),
 				'System Layer' => phodevi::read_property('system', 'system-layer'),
+				'Security' => phodevi::read_property('system', 'security-features'),
 				)
 			);
 
@@ -325,7 +329,7 @@ class phodevi extends phodevi_base
 		{
 			$sys_string = null;
 			$tabled = array();
-			foreach($sys as $key => $in)
+			foreach($sys as $key => &$in)
 			{
 				$space_in = 2;
 				if(is_array($in))
@@ -342,6 +346,11 @@ class phodevi extends phodevi_base
 				}
 				else if(true || !empty($in)) // TODO this check not needed anymore?
 				{
+				if(($x = strpos($in, ' (')))
+				{
+					$in = substr($in, 0, $x);
+				}
+
 					if(!empty($tabled))
 					{
 						$sys_string .= pts_user_io::display_text_table($tabled, '    ', 0, 17) . PHP_EOL;
@@ -375,41 +384,82 @@ class phodevi extends phodevi_base
 		$components = array(phodevi::read_property('cpu', 'model'), phodevi::read_property('system', 'operating-system'), phodevi::read_property('system', 'compiler'), $extra);
 		return base64_encode(implode('__', $components));
 	}
-	public static function read_device_notes($device)
+	public static function read_property($device, $read_property)
 	{
-		$devices = phodevi::available_hardware_devices();
+		static $properties_table = array();
+		$value = false;
 
-		if($device != null && isset($devices[$device]))
+		if(!isset($properties_table[$device]))
 		{
-			$notes_r = call_user_func(array('phodevi_' . $devices[$device], 'device_notes'));
+			$properties_table[$device] = call_user_func(array('phodevi_' . $device, 'properties'));
+		}
+
+		if(!isset($properties_table[$device][$read_property]))
+		{
+			echo 'NOTICE: ' . $read_property . ' does not exist for ' . $device . '.' . PHP_EOL;
+		}
+
+		if(!($properties_table[$device][$read_property] instanceof phodevi_device_property))
+		{
+			return $properties_table[$device][$read_property];
+		}
+
+		$cache_code = $properties_table[$device][$read_property]->cache_code();
+		if($cache_code != phodevi::no_caching && phodevi::$allow_phodevi_caching && isset(self::$device_cache[$device][$read_property]))
+		{
+			$value = self::$device_cache[$device][$read_property];
 		}
 		else
 		{
-			$notes_r = array();
+			$dev_function_r = pts_arrays::to_array($properties_table[$device][$read_property]->get_device_function());
+			$dev_function = $dev_function_r[0];
+			$function_pass = array();
+
+			for($i = 1; $i < count($dev_function_r); $i++)
+			{
+				array_push($function_pass, $dev_function_r[$i]);
+			}
+			if(method_exists('phodevi_' . $device, $dev_function))
+			{
+				$value = call_user_func_array(array('phodevi_' . $device, $dev_function), $function_pass);
+				if(!is_array($value) && $value != null)
+				{
+					$value = pts_strings::strip_string($value);
+					if(function_exists('preg_replace'))
+					{
+						$value = preg_replace('/[^(\x20-\x7F)]*/','', $value);
+					}
+				}
+
+				if($cache_code != phodevi::no_caching)
+				{
+					self::$device_cache[$device][$read_property] = $value;
+
+					if($cache_code == phodevi::smart_caching)
+					{
+						// TODO: For now just copy the smart cache to other var, but come up with better yet efficient way
+						self::$smart_cache[$device][$read_property] = $value;
+					}
+				}
+			}
 		}
 
-		return is_array($notes_r) ? $notes_r : array();
+		return $value;
 	}
-	public static function read_property($device, $read_property)
+	public static function read_all_properties()
 	{
-		$value = false;
-
-		if(method_exists('phodevi_' . $device, 'read_property'))
+		$all_properties = array();
+		$components = array();
+		foreach(glob(__DIR__ . '/components/phodevi_*.php') as $file)
 		{
-			$property = call_user_func(array('phodevi_' . $device, 'read_property'), $read_property);
+			$components[] = substr(basename($file, '.php'), 8);
+		}
 
-			if(!($property instanceof phodevi_device_property))
-			{
-				return false;
-			}
-
-			$cache_code = $property->cache_code();
-
-			if($cache_code != phodevi::no_caching && phodevi::$allow_phodevi_caching && isset(self::$device_cache[$device][$read_property]))
-			{
-				$value = self::$device_cache[$device][$read_property];
-			}
-			else
+		foreach($components as $device)
+		{
+			$properties = call_user_func(array('phodevi_' . $device, 'properties'));
+			$all_properties[$device] = array();
+			foreach($properties as $id => $property)
 			{
 				$dev_function_r = pts_arrays::to_array($property->get_device_function());
 				$dev_function = $dev_function_r[0];
@@ -419,11 +469,9 @@ class phodevi extends phodevi_base
 				{
 					array_push($function_pass, $dev_function_r[$i]);
 				}
-
 				if(method_exists('phodevi_' . $device, $dev_function))
 				{
 					$value = call_user_func_array(array('phodevi_' . $device, $dev_function), $function_pass);
-
 					if(!is_array($value) && $value != null)
 					{
 						$value = pts_strings::strip_string($value);
@@ -432,22 +480,12 @@ class phodevi extends phodevi_base
 							$value = preg_replace('/[^(\x20-\x7F)]*/','', $value);
 						}
 					}
-
-					if($cache_code != phodevi::no_caching)
-					{
-						self::$device_cache[$device][$read_property] = $value;
-
-						if($cache_code == phodevi::smart_caching)
-						{
-							// TODO: For now just copy the smart cache to other var, but come up with better yet efficient way
-							self::$smart_cache[$device][$read_property] = $value;
-						}
-					}
+					$all_properties[$device][$id] = $value;
 				}
 			}
 		}
 
-		return $value;
+		return $all_properties;
 	}
 	public static function set_property($device, $set_property, $pass_args = array())
 	{
@@ -588,7 +626,12 @@ class phodevi extends phodevi_base
 		// Returns the system's uptime in seconds
 		$uptime = 1;
 
-		if(is_file('/proc/uptime'))
+		if(phodevi::is_windows())
+		{
+			$uptime = trim(shell_exec('powershell "((get-date) - (gcim Win32_OperatingSystem).LastBootUpTime).TotalSeconds"'));
+			$uptime = is_numeric($uptime) && $uptime > 1 ? round($uptime) : 1;
+		}
+		else if(is_file('/proc/uptime'))
 		{
 			$uptime = pts_strings::first_in_string(pts_file_io::file_get_contents('/proc/uptime'));
 		}
@@ -646,6 +689,39 @@ class phodevi extends phodevi_base
 		}
 
 		return intval($uptime);
+	}
+	public static function reboot()
+	{
+		if(pts_client::executable_in_path('reboot'))
+		{
+			shell_exec('reboot');
+			sleep(5);
+		}
+		if(phodevi::is_windows())
+		{
+			shell_exec('shutdown /r');
+			sleep(5);
+		}
+	}
+	public static function shutdown()
+	{
+		// some systems like systemctl poweroff, others just like poweroff, but not consistent one method for all systems in testing
+		if(pts_client::executable_in_path('systemctl') && rand(0, 1) == 1)
+		{
+			// Try systemd's poweroff method first
+			shell_exec('systemctl poweroff');
+			sleep(5);
+		}
+		if(pts_client::executable_in_path('poweroff'))
+		{
+			shell_exec('poweroff');
+			sleep(5);
+		}
+		if(phodevi::is_windows())
+		{
+			shell_exec('shutdown /s');
+			sleep(5);
+		}
 	}
 	public static function cpu_arch_compatible($check_against)
 	{

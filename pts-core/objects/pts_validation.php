@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2009 - 2017, Phoronix Media
-	Copyright (C) 2009 - 2017, Michael Larabel
+	Copyright (C) 2009 - 2018, Phoronix Media
+	Copyright (C) 2009 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -174,7 +174,7 @@ class pts_validation
 
 			$dom = new DOMDocument();
 			$dom->load($download_xml_file);
-			$valid = $dom->schemaValidate(PTS_OPENBENCHMARKING_PATH . 'schemas/test-profile-downloads.xsd');
+			$valid = $dom->schemaValidate(pts_openbenchmarking::openbenchmarking_standards_path() . 'schemas/test-profile-downloads.xsd');
 
 			if($valid == false)
 			{
@@ -193,7 +193,7 @@ class pts_validation
 			$files_missing = 0;
 			$file_count = 0;
 
-			foreach(pts_test_install_request::read_download_object_list($test_profile) as $download)
+			foreach($test_profile->get_downloads() as $download)
 			{
 				foreach($download->get_download_url_array() as $url)
 				{
@@ -231,7 +231,7 @@ class pts_validation
 
 			$dom = new DOMDocument();
 			$dom->load($parser_file);
-			$valid = $dom->schemaValidate(PTS_OPENBENCHMARKING_PATH . 'schemas/results-parser.xsd');
+			$valid = $dom->schemaValidate(pts_openbenchmarking::openbenchmarking_standards_path() . 'schemas/results-parser.xsd');
 
 			if($valid == false)
 			{
@@ -283,6 +283,8 @@ class pts_validation
 		$result_precision = $xml_parser->getXMLArrayValues('PhoronixTestSuite/ResultsParser/ResultPrecision');
 		$result_args_desc = $xml_parser->getXMLArrayValues('PhoronixTestSuite/ResultsParser/ArgumentsDescription');
 		$result_append_args_desc = $xml_parser->getXMLArrayValues('PhoronixTestSuite/ResultsParser/AppendToArgumentsDescription');
+		$DeleteOutputBefore = $xml_parser->getXMLArrayValues('PhoronixTestSuite/ResultsParser/DeleteOutputBefore');
+		$DeleteOutputAfter = $xml_parser->getXMLArrayValues('PhoronixTestSuite/ResultsParser/DeleteOutputAfter');
 
 		foreach(array_keys($result_template) as $i)
 		{
@@ -306,6 +308,8 @@ class pts_validation
 			$xml_writer->addXmlNodeWNE('PhoronixTestSuite/ResultsParser/AppendToArgumentsDescription', $result_append_args_desc[$i]);
 			$xml_writer->addXmlNodeWNE('PhoronixTestSuite/ResultsParser/FileFormat', $file_format[$i]);
 			$xml_writer->addXmlNodeWNE('PhoronixTestSuite/ResultsParser/TurnCharsToSpace', $chars_to_space[$i]);
+			$xml_writer->addXmlNodeWNE('PhoronixTestSuite/ResultsParser/DeleteOutputBefore', $DeleteOutputBefore[$i]);
+			$xml_writer->addXmlNodeWNE('PhoronixTestSuite/ResultsParser/DeleteOutputAfter', $DeleteOutputAfter[$i]);
 		}
 
 		$result_iqc_source_file = $xml_parser->getXMLArrayValues('PhoronixTestSuite/ImageParser/SourceImage');
@@ -344,6 +348,381 @@ class pts_validation
 		}
 
 		return $xml_writer;
+	}
+	public static function process_xsd_types()
+	{
+		$doc = new DOMDocument();
+		$xsd_file = pts_openbenchmarking::openbenchmarking_standards_path() . 'schemas/types.xsd';
+		if(is_file($xsd_file))
+		{
+			$doc->loadXML(file_get_contents($xsd_file));
+		}
+		$xpath = new DOMXPath($doc);
+		$xpath->registerNamespace('xs', 'http://www.w3.org/2001/XMLSchema');
+
+		$types = array();
+		foreach($xpath->evaluate('/xs:schema/xs:simpleType') as $e)
+		{
+			$name = $e->getAttribute('name');
+			$type = $e->getElementsByTagName('restriction')->item(0)->getAttribute('base');
+			switch($type)
+			{
+				case 'xs:integer':
+					$type = 'INT';
+					break;
+				case 'xs:string':
+					$type = 'STRING';
+					break;
+			}
+			if($e->getElementsByTagName('restriction')->item(0)->getElementsByTagName('minLength')->length > 0)
+			{
+				$min_length = $e->getElementsByTagName('restriction')->item(0)->getElementsByTagName('minLength')->item(0)->getAttribute('value');
+			}
+			else
+			{
+				$min_length = -1;
+			}
+			if($e->getElementsByTagName('restriction')->item(0)->getElementsByTagName('maxLength')->length > 0)
+			{
+				$max_length = $e->getElementsByTagName('restriction')->item(0)->getElementsByTagName('maxLength')->item(0)->getAttribute('value');
+			}
+			else
+			{
+				$max_length = -1;
+			}
+			if($e->getElementsByTagName('restriction')->item(0)->getElementsByTagName('minInclusive')->length > 0)
+			{
+				$min_value = $e->getElementsByTagName('restriction')->item(0)->getElementsByTagName('minInclusive')->item(0)->getAttribute('value');
+			}
+			else
+			{
+				$min_value = -1;
+			}
+			if($e->getElementsByTagName('restriction')->item(0)->getElementsByTagName('maxInclusive')->length > 0)
+			{
+				$max_value = $e->getElementsByTagName('restriction')->item(0)->getElementsByTagName('maxInclusive')->item(0)->getAttribute('value');
+			}
+			else
+			{
+				$max_value = -1;
+			}
+
+			$enums = array();
+			for($i = 0; $i < $e->getElementsByTagName('restriction')->item(0)->getElementsByTagName('enumeration')->length; $i++)
+			{
+				$enums[] = $e->getElementsByTagName('restriction')->item(0)->getElementsByTagName('enumeration')->item($i)->getAttribute('value');
+			}
+
+
+			$types[$name] = new pts_input_type_restrictions($name, $type, $min_length, $max_length, $min_value, $max_value, $enums);
+		}
+		return $types;
+	}
+	public static function process_xsd_display_chart($xsd_file, $obj = null, $types = null)
+	{
+		$nodes = self::generate_xsd_element_objects($xsd_file, $obj, $types);
+		self::xsd_display_cli_from_objects($nodes);
+	}
+	public static function xsd_to_cli_creator($xsd_file, &$new_object, $types = null)
+	{
+		$nodes = self::generate_xsd_element_objects($xsd_file, null, $types);
+		self::xsd_nodes_to_cli_prompts($nodes, $new_object);
+	}
+	public static function xsd_nodes_to_cli_prompts($nodes, &$new_object)
+	{
+		foreach($nodes as $path => $node)
+		{
+			if($node->get_documentation() == null)
+			{
+				continue;
+			}
+
+			if(in_array('UNCOMMON', $node->get_flags_array()))
+			{
+				continue;
+			}
+
+			echo pts_client::cli_just_bold($node->get_name());
+
+			/*
+			if($node->get_value() != null)
+			{
+				echo ': ' . pts_client::cli_colored_text($node->get_value(), 'cyan');
+			}
+			*/
+
+			echo PHP_EOL;
+			$enums = array();
+			$min_value = -1;
+			$max_value = -1;
+			if($node->get_input_type_restrictions() != null)
+			{
+				$type = $node->get_input_type_restrictions();
+				$enums = $type->get_enums();
+				if(!empty($enums))
+				{
+					echo pts_client::cli_colored_text('Possible Values: ', 'gray', true) . implode(', ', $enums) . PHP_EOL;
+				}
+				$min_value = $type->get_min_value();
+				if($min_value > -1)
+				{
+					echo pts_client::cli_colored_text('Minimum Value: ', 'gray', true) . $min_value . PHP_EOL;
+				}
+				$max_value = $type->get_max_value();
+				if($max_value > 0)
+				{
+					echo pts_client::cli_colored_text('Maximum Value: ', 'gray', true) . $max_value . PHP_EOL;
+				}
+			}
+			/*if($node->get_api() != null)
+			{
+				echo pts_client::cli_colored_text('API: ', 'gray', true) . $node->get_api()[0] . '->' . $node->get_api()[1] . '()' . PHP_EOL;
+			}*/
+			if($node->get_documentation() != null)
+			{
+				echo $node->get_documentation() . PHP_EOL;
+			}
+			if($node->get_default_value() != null)
+			{
+				echo pts_client::cli_colored_text('Default Value: ', 'gray', true) . $node->get_default_value() . PHP_EOL;
+			}
+
+			$do_require = in_array('TEST_REQUIRES', $node->get_flags_array());
+			if(!empty($enums))
+			{
+				$input = pts_user_io::prompt_text_menu('Select from the supported options', $enums, false, false, null);
+			}
+			else
+			{
+				do
+				{
+					$input_passes = true;
+					$input = pts_user_io::prompt_user_input($path, !($do_require && $node->get_default_value() == null), false);
+
+					if($do_require && $min_value > 0 && strlen($input) < $min_value)
+					{
+						echo 'Minimum length of ' . $min_value . ' is required.';
+						$input_passes = false;
+					}
+					if($do_require && $max_value > 0 && strlen($input) > $max_value)
+					{
+						echo 'Maximum length of ' . $max_value . ' is supported.';
+						$input_passes = false;
+					}
+
+				}
+				while(!$input_passes);
+
+				if(empty($input) && $node->get_default_value() != null)
+				{
+					$input = $node->get_default_value();
+				}
+			}
+
+			$new_object->addXmlNodeWNE($path, trim($input));
+
+			echo PHP_EOL;
+		}
+	}
+	protected static function generate_xsd_element_objects($xsd_file, $obj = null, $types = null)
+	{
+		$doc = new DOMDocument();
+		if(is_file($xsd_file))
+		{
+			$doc->loadXML(file_get_contents($xsd_file));
+		}
+		$xpath = new DOMXPath($doc);
+		$xpath->registerNamespace('xs', 'http://www.w3.org/2001/XMLSchema');
+
+		$nodes = array();
+		$ev = $xpath->evaluate('/xs:schema/xs:element');
+		foreach($ev as $e)
+		{
+			self::xsd_elements_to_objects($nodes, $obj, $xpath, $e, $types, '');
+		}
+
+		return $nodes;
+	}
+	public static function xsd_elements_to_objects(&$append_to_array, $o, $xpath, $el, $types, $path)
+	{
+		static $unbounded;
+
+		if($el->getElementsByTagName('*')->length > 0 && $el->getElementsByTagName('*')->item(0)->nodeName == 'xs:annotation' && $el->getElementsByTagName('*')->item(0)->getElementsByTagName('documentation')->length > 0)
+		{
+			$name = $el->getAttribute('name');
+			$value = null;
+			$get_api = null;
+			$set_api = null;
+			$default_value = null;
+			$flags = null;
+			$nodes_to_match = array('set' => 'set_api', 'get' => 'get_api', 'default' => 'default_value', 'flags' => 'flags');
+			$cnodes = $el->getElementsByTagName('*');
+			for($i = 0; $i < $cnodes->length; $i++)
+			{
+				if(isset($nodes_to_match[$cnodes->item($i)->nodeName]))
+				{
+					${$nodes_to_match[$cnodes->item($i)->nodeName]} = $cnodes->item($i)->nodeValue;
+				}
+			}
+
+			if($get_api != null && (is_callable(array($o, $get_api)) || (is_array($o) && isset($o[$get_api]))))
+			{
+				if(is_object($o))
+				{
+					$class = get_class($o);
+					$val = call_user_func(array($o, $get_api));
+
+					if(is_object($val))
+					{
+						$o = $val;
+						$val = null;
+					}
+				}
+				else if(is_array($o))
+				{
+					$class = null;
+					$val = $o[$get_api];
+				}
+
+				if($el->getAttribute('maxOccurs') == 'unbounded')
+				{
+					$o = $val;
+					$val = null;
+				}
+				else if(is_array($val))
+				{
+					$val = '{ ' . implode(', ', call_user_func(array($o, $get_api))) . ' }';
+				}
+				else if($val === true)
+				{
+					$val = 'TRUE';
+				}
+				else if($val === false)
+				{
+					$val = 'FALSE';
+				}
+
+				if(!empty($val))
+				{
+					$value = $val;
+				}
+			}
+
+			$input_type_restrictions = null;
+			if($el->getAttribute('type') != null)
+			{
+				$type = $el->getAttribute('type');
+				if(isset($types[$type]))
+				{
+					$types[$type]->set_required($el->getAttribute('minOccurs') > 0);
+					$input_type_restrictions = $types[$type];
+				}
+			}
+			if(is_array($unbounded))
+			{
+				foreach($unbounded as $ub_check)
+				{
+					if(strpos($path, $ub_check) !== false)
+					{
+						$flags .= ' UNBOUNDED';
+						break;
+					}
+				}
+			}
+			$api = null;
+			if(!empty($get_api) && !empty($class))
+			{
+				$api = array($class, $get_api);
+			}
+			$documentation = trim($el->getElementsByTagName('annotation')->item('0')->getElementsByTagName('documentation')->item(0)->nodeValue);
+			$append_to_array[$path . '/' . $name] = new pts_element_node($name, $value, $input_type_restrictions, $api, $documentation, $set_api, $default_value, $flags);
+		}
+		else
+		{
+			$name = $el->getAttribute('name');
+			$append_to_array[$path . '/' . $name] = new pts_element_node($name);
+		}
+
+		if($el->getAttribute('maxOccurs') == 'unbounded')
+		{
+			$unbounded[$path . '/' . $name] =  $path . '/' . $name;
+		}
+
+		$els = $xpath->evaluate('xs:complexType/xs:sequence/xs:element', $el);
+		if(is_array($o) && !empty($o))
+		{
+			$path .= (!empty($path) ? '/' : '') . $name;
+			foreach($o as $j)
+			{
+				foreach($els as $e)
+				{
+					self:: xsd_elements_to_objects($append_to_array, $j, $xpath, $e, $types, $path);
+				}
+			}
+		}
+		else
+		{
+			$path .= (!empty($path) ? '/' : '') . $name;
+			foreach($els as $e)
+			{
+				self:: xsd_elements_to_objects($append_to_array, $o, $xpath, $e, $types, $path);
+			}
+		}
+	}
+	public static function xsd_display_cli_from_objects($nodes)
+	{
+		foreach($nodes as $path => $node)
+		{
+			$depth = count(explode('/', $path)) - 1;
+			if($node->get_documentation() == null)
+			{
+				echo str_repeat('     ', $depth) . pts_client::cli_colored_text($node->get_name(), 'yellow', true);
+			}
+			else
+				echo str_repeat('     ', $depth) . pts_client::cli_just_bold($node->get_name());
+
+			if($node->get_value() != null)
+			{
+				echo ': ' . pts_client::cli_colored_text($node->get_value(), 'cyan');
+			}
+			echo PHP_EOL;
+			if($node->get_input_type_restrictions() != null)
+			{
+				$type = $node->get_input_type_restrictions();
+				$enums = $type->get_enums();
+				if(!empty($enums))
+				{
+					echo str_repeat('     ', $depth) . pts_client::cli_colored_text('Possible Values: ', 'gray', true) . implode(', ', $enums) . PHP_EOL;
+				}
+				$min_value = $type->get_min_value();
+				if($min_value > -1)
+				{
+					echo str_repeat('     ', $depth) . pts_client::cli_colored_text('Minimum Value: ', 'gray', true) . $min_value . PHP_EOL;
+				}
+				$max_value = $type->get_max_value();
+				if($max_value > 0)
+				{
+					echo str_repeat('     ', $depth) . pts_client::cli_colored_text('Maximum Value: ', 'gray', true) . $max_value . PHP_EOL;
+				}
+			}
+			if($node->get_api() != null)
+			{
+				echo str_repeat('     ', $depth) . pts_client::cli_colored_text('Get API: ', 'gray', true) . $node->get_api()[0] . '->' . $node->get_api()[1] . '()' . PHP_EOL;
+			}
+			if($node->get_api_setter() != null)
+			{
+				echo str_repeat('     ', $depth) . pts_client::cli_colored_text('Set API: ', 'gray', true) . $node->get_api_setter() . '()' . PHP_EOL;
+			}
+			if($node->get_default_value() != null)
+			{
+				echo str_repeat('     ', $depth) . pts_client::cli_colored_text('Default Value: ', 'gray', true) . $node->get_default_value() . PHP_EOL;
+			}
+			if($node->get_documentation() != null)
+			{
+				echo str_repeat('     ', $depth) .  $node->get_documentation() . PHP_EOL;
+			}
+			echo PHP_EOL;
+		}
 	}
 }
 

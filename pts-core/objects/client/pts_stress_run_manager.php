@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2015 - 2017, Phoronix Media
-	Copyright (C) 2015 - 2017, Michael Larabel
+	Copyright (C) 2015 - 2018, Phoronix Media
+	Copyright (C) 2015 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -133,6 +133,13 @@ class pts_stress_run_manager extends pts_test_run_manager
 			$table[] = array($component . ': ', $value);
 		}
 		$this->stress_print_and_log('SYSTEM INFORMATION: ' . PHP_EOL . phodevi::system_centralized_view() . PHP_EOL . PHP_EOL);
+		if(!function_exists('pcntl_waitpid'))
+		{
+			$this->stress_print_and_log('PHP PCNTL support is to run stress tests.' . PHP_EOL);
+			return false;
+
+		}
+		pts_module_manager::module_process('__pre_run_process', $this);
 
 		// BEGIN THE LOOP
 		while(!empty($possible_tests_to_run))
@@ -305,6 +312,7 @@ class pts_stress_run_manager extends pts_test_run_manager
 			}
 		}
 
+		pts_module_manager::module_process('__post_run_process', $this);
 		putenv('FORCE_TIMES_TO_RUN');
 		pts_file_io::delete($this->thread_collection_dir, null, true);
 
@@ -326,6 +334,10 @@ class pts_stress_run_manager extends pts_test_run_manager
 		pcntl_signal(SIGHUP, SIG_DFL);
 
 		return true;
+	}
+	public function is_interactive_mode()
+	{
+		return false;
 	}
 	protected function skip_test_check(&$test)
 	{

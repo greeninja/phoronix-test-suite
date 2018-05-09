@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2009 - 2011, Phoronix Media
-	Copyright (C) 2009 - 2011, Michael Larabel
+	Copyright (C) 2009 - 2018, Phoronix Media
+	Copyright (C) 2009 - 2018, Michael Larabel
 	phodevi_windows_parser.php: General parsing functions specific to the Windows OS
 
 	This program is free software; you can redistribute it and/or modify
@@ -23,61 +23,31 @@
 
 class phodevi_windows_parser
 {
-	public static function read_cpuz($section, $name, $match_multiple = false)
+
+	public static function get_wmi_object($object, $name)
 	{
-		$return = $match_multiple ? array() : false;
-
-		if(is_executable('C:\Program Files\CPUID\CPU-Z\cpuz.exe'))
+		$wmi_output = trim(shell_exec('powershell "$obj = Get-WmiObject ' . $object . '; echo $obj.' . $name . '"'));
+		$wmi_output = strpos($wmi_output, 'Invalid') == false ? trim($wmi_output) : null;
+		if(($x = strpos($wmi_output, "\n")) !== false)
 		{
-			static $cpuz_log = null;
-
-			if($cpuz_log == null)
+			$wmi_output = substr($wmi_output, 0, $x);
+		}
+		return $wmi_output;
+	}
+	public static function get_wmi_object_multi($object, $name)
+	{
+		$wmi_output = trim(shell_exec('powershell "Get-WmiObject ' . $object . '"'));
+		$matches = array();
+		foreach(explode("\n", $wmi_output) as $line)
+		{
+			$line = explode(' : ', $line);
+			if(trim($line[0]) == $name && isset($line[1]))
 			{
-				shell_exec('"C:\Program Files\CPUID\CPU-Z\cpuz.exe" -txt=' . PTS_USER_PATH . 'cpuz');
-
-				if(is_file(PTS_USER_PATH . 'cpuz.txt'))
-				{
-					$cpuz_log = file_get_contents(PTS_USER_PATH . 'cpuz.txt');
-					unlink(PTS_USER_PATH . 'cpuz.txt');
-				}
-			}
-
-			$s = 0;
-
-			while(($match_multiple || $s == 0) && isset($cpuz_log[($s + 1)]) && ($s = strpos($cpuz_log, "\n" . $section, ($s + 1))) !== false)
-			{
-				$cpuz_section = substr($cpuz_log, $s);
-
-				if(($name != null && ($c = strpos($cpuz_section, '	' . $name)) !== false) || ($c = 0) == 0)
-				{
-					if($name == null)
-					{
-						$name = $section;
-					}
-
-					$cpuz_section = substr($cpuz_section, $c, (strpos($cpuz_section, "\r\n", $c) - $c));
-					$return_match = substr($cpuz_section, strpos($cpuz_section, $name) + strlen($name));
-
-					if(($e = strpos($return_match, '(')) !== false)
-					{
-						$return_match = substr($return_match, 0, $e);
-					}
-
-					$return_match = trim($return_match);
-
-					if($match_multiple)
-					{
-						array_push($return, $return_match);
-					}
-					else
-					{
-						$return = $return_match;
-					}
-				}
+				$matches[] = trim($line[1]);
 			}
 		}
 
-		return $return;
+		return $matches;
 	}
 }
 

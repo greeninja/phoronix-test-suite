@@ -44,6 +44,10 @@
 			<PackageName>libpng</PackageName>
 		</Package>
 		<Package>
+			<GenericName>rust</GenericName>
+			<PackageName>rust</PackageName>
+		</Package>
+		<Package>
 			<GenericName>tiff</GenericName>
 			<PackageName>libtiff</PackageName>
 		</Package>
@@ -196,6 +200,10 @@
 			<PackageName>tcl</PackageName>
 		</Package>
 		<Package>
+			<GenericName>meson</GenericName>
+			<PackageName>meson</PackageName>
+		</Package>
+		<Package>
 			<GenericName>python</GenericName>
 			<PackageName>python</PackageName>
 		</Package>
@@ -228,6 +236,10 @@
 			<PackageName>suitesparse</PackageName>
 		</Package>
 		<Package>
+			<GenericName>openmpi-development</GenericName>
+			<PackageName>openmpi</PackageName>
+		</Package>
+		<Package>
 			<GenericName>dune</GenericName>
 			<PackageName>dune-common dune-grid dune-istl</PackageName>
 		</Package>
@@ -255,10 +267,10 @@
 			<GenericName>opencv</GenericName>
 			<PackageName>opencv</PackageName>
 		</Package>
-		<Package>
-                        <GenericName>perl-digest-md5</GenericName>
-                        <PackageName>perl-digest-md5-file perl6-digest-md5</PackageName>
-                </Package>
+                <Package>
+			<GenericName>golang</GenericName>
+			<PackageName>go</PackageName>
+		</Package>
 		<Package>
 			<GenericName>python-scipy</GenericName>
 			<PackageName>python2-scipy</PackageName>
@@ -266,6 +278,14 @@
 		<Package>
 			<GenericName>python-sklearn</GenericName>
 			<PackageName>python2-scikit-learn</PackageName>
+		</Package>
+		<Package>
+			<GenericName>V8</GenericName>
+			<PackageName>v8</PackageName>
+		</Package>
+		<Package>
+			<GenericName>ruby</GenericName>
+			<PackageName>ruby</PackageName>
 		</Package>
 	</ExternalDependencies>
 </PhoronixTestSuite>

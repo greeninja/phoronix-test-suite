@@ -463,7 +463,7 @@ class pts_test_installer
 	}
 	public static function create_compiler_mask(&$test_install_request)
 	{
-		if(phodevi::is_bsd() || getenv('PTS_NO_COMPILER_MASK'))
+		if(getenv('PTS_NO_COMPILER_MASK'))
 		{
 			// XXX: Using the compiler-mask causes a number of tests to fail to properly install due to compiler issues with at least PC-BSD 10.0
 			return false;
@@ -482,7 +482,15 @@ class pts_test_installer
 		if($test_install_request === false || in_array('fortran-compiler', $external_dependencies))
 		{
 			// Handle Fortran for this external dependency
-			$compilers['F9X'] = array(pts_strings::first_in_string(pts_client::read_env('F9X'), ' '), pts_strings::first_in_string(pts_client::read_env('F95'), ' '), 'gfortran', 'f90', 'f95', 'fortran');
+			$compilers['F9X'] = array(pts_strings::first_in_string(pts_client::read_env('F9X'), ' '), pts_strings::first_in_string(pts_client::read_env('F95'), ' '), 'gfortran', 'f90', 'f95', 'fortran', 'gfortran9', 'gfortran8', 'gfortran6', 'gfortran6');
+		}
+		if(!pts_client::executable_in_path('python'))
+		{
+			$compilers['PY2'] = array('python2', 'python2.7', 'python2.6');
+		}
+		if(!pts_client::executable_in_path('python3'))
+		{
+			$compilers['PY3'] = array('python3.7', 'python3.6', 'python3.5', 'python3.4');
 		}
 
 		if(empty($compilers))
@@ -530,7 +538,9 @@ class pts_test_installer
 			$compiler_extras = array(
 				'CC' => array('safeguard-names' => array('gcc', 'cc'), 'environment-variables' => 'CFLAGS'),
 				'CXX' => array('safeguard-names' => array('g++', 'c++'), 'environment-variables' => 'CXXFLAGS'),
-				'F9X' => array('safeguard-names' => array('gfortran', 'f95'), 'environment-variables' => 'F9XFLAGS')
+				'F9X' => array('safeguard-names' => array('gfortran', 'f95'), 'environment-variables' => 'FFLAGS'),
+				'PY2' => array('safeguard-names' => array('python'), 'environment-variables' => ''),
+				'PY3' => array('safeguard-names' => array('python3'), 'environment-variables' => '')
 				);
 
 			foreach($compilers as $compiler_type => $compiler_path)
@@ -768,6 +778,16 @@ class pts_test_installer
 					file_put_contents($test_install_directory . 'install.log', $install_log);
 					pts_file_io::unlink($test_install_directory . 'install-failed.log');
 					pts_client::$display->test_install_output($install_log);
+				}
+
+				if(is_file($test_install_directory . 'install-message'))
+				{
+					// Any helpful message to convey to the user
+					$install_msg = pts_file_io::file_get_contents($test_install_directory . 'install-message');
+					if(!empty($install_msg))
+					{
+						pts_client::$display->test_install_message($install_msg);
+					}
 				}
 
 				if(is_file($test_install_directory . 'install-exit-status'))

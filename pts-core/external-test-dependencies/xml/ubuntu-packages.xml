@@ -9,7 +9,7 @@
 		</Information>
 		<Package>
 			<GenericName>common-dependencies</GenericName>
-			<PackageName>mesa-utils unzip apt-file</PackageName>
+			<PackageName>mesa-utils unzip apt-file unzip</PackageName>
 			<FileCheck>glxinfo, unzip, apt-file</FileCheck>
 		</Package>
 		<Package>
@@ -205,7 +205,7 @@
 		</Package>
 		<Package>
 			<GenericName>curl</GenericName>
-			<PackageName>libcurl3 curl</PackageName>
+			<PackageName>libcurl3 curl libcurl4-openssl-dev</PackageName>
 		</Package>
 		<Package>
 			<GenericName>fftw3-development</GenericName>
@@ -249,6 +249,10 @@
 			<PackageName>libc6-dev</PackageName>
 		</Package>
 		<Package>
+			<GenericName>rust</GenericName>
+			<PackageName>rustc cargo</PackageName>
+		</Package>
+		<Package>
 			<GenericName>glibc-development</GenericName>
 			<PackageName>libc6-dev-i386</PackageName>
 			<FileCheck>/usr/lib32/libc.so</FileCheck>
@@ -256,7 +260,7 @@
 		</Package>
 		<Package>
 			<GenericName>python</GenericName>
-			<PackageName>python</PackageName>
+			<PackageName>python python3-pip</PackageName>
 		</Package>
 		<Package>
 			<GenericName>python-boost-development</GenericName>
@@ -315,9 +319,17 @@
 			<GenericName>httpd</GenericName>
 			<PackageName>apache2</PackageName>
 		</Package>
+		<Package>
+			<GenericName>meson</GenericName>
+			<PackageName>meson</PackageName>
+		</Package>
                 <Package>
 			<GenericName>golang</GenericName>
 			<PackageName>golang</PackageName>
+		</Package>
+                <Package>
+			<GenericName>steam</GenericName>
+			<PackageName>steam</PackageName>
 		</Package>
                 <Package>
 			<GenericName>redis-server</GenericName>
@@ -340,6 +352,22 @@
 			<GenericName>python-sklearn</GenericName>
 			<PackageName>python-sklearn</PackageName>
 			<FileCheck>/usr/lib/python2.7/dist-packages/sklearn/</FileCheck>
+		</Package>
+		<Package>
+			<GenericName>V8</GenericName>
+			<PackageName>libv8-dev</PackageName>
+		</Package>
+		<Package>
+			<GenericName>ruby</GenericName>
+			<PackageName>ruby</PackageName>
+		</Package>
+		<Package>
+			<GenericName>gimp</GenericName>
+			<PackageName>gimp</PackageName>
+		</Package>
+		<Package>
+			<GenericName>darktable</GenericName>
+			<PackageName>darktable</PackageName>
 		</Package>
 	</ExternalDependencies>
 </PhoronixTestSuite>

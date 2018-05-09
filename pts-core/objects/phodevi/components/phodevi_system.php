@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2017, Phoronix Media
-	Copyright (C) 2008 - 2017, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 	phodevi_system.php: The PTS Device Interface object for the system software
 
 	This program is free software; you can redistribute it and/or modify
@@ -23,94 +23,38 @@
 
 class phodevi_system extends phodevi_device_interface
 {
-	public static function read_property($identifier)
+	public static function properties()
 	{
-		switch($identifier)
-		{
-			case 'username':
-				$property = new phodevi_device_property('sw_username', phodevi::std_caching);
-				break;
-			case 'hostname':
-				$property = new phodevi_device_property('sw_hostname', phodevi::smart_caching);
-				break;
-			case 'vendor-identifier':
-				$property = new phodevi_device_property('sw_vendor_identifier', phodevi::smart_caching);
-				break;
-			case 'filesystem':
-				$property = new phodevi_device_property('sw_filesystem', phodevi::no_caching);
-				break;
-			case 'virtualized-mode':
-				$property = new phodevi_device_property('sw_virtualized_mode', phodevi::smart_caching);
-				break;
-			case 'java-version':
-				$property = new phodevi_device_property('sw_java_version', phodevi::std_caching);
-				break;
-			case 'python-version':
-				$property = new phodevi_device_property('sw_python_version', phodevi::std_caching);
-				break;
-			case 'wine-version':
-				$property = new phodevi_device_property('sw_wine_version', phodevi::std_caching);
-				break;
-			case 'display-server':
-				$property = new phodevi_device_property('sw_display_server', phodevi::smart_caching);
-				break;
-			case 'display-driver':
-				$property = new phodevi_device_property(array('sw_display_driver', false), phodevi::smart_caching);
-				break;
-			case 'display-driver-string':
-				$property = new phodevi_device_property(array('sw_display_driver', true), phodevi::smart_caching);
-				break;
-			case 'dri-display-driver':
-				$property = new phodevi_device_property('sw_dri_display_driver', phodevi::smart_caching);
-				break;
-			case 'opengl-driver':
-				$property = new phodevi_device_property('sw_opengl_driver', phodevi::std_caching);
-				break;
-			case 'vulkan-driver':
-				$property = new phodevi_device_property('sw_vulkan_driver', phodevi::std_caching);
-				break;
-			case 'opencl-driver':
-				$property = new phodevi_device_property('sw_opencl_driver', phodevi::std_caching);
-				break;
-			case 'opengl-vendor':
-				$property = new phodevi_device_property('sw_opengl_vendor', phodevi::smart_caching);
-				break;
-			case 'desktop-environment':
-				$property = new phodevi_device_property('sw_desktop_environment', phodevi::smart_caching);
-				break;
-			case 'operating-system':
-				$property = new phodevi_device_property('sw_operating_system', phodevi::smart_caching);
-				break;
-			case 'os-version':
-				$property = new phodevi_device_property('sw_os_version', phodevi::smart_caching);
-				break;
-			case 'kernel':
-				$property = new phodevi_device_property('sw_kernel', phodevi::smart_caching);
-				break;
-			case 'kernel-architecture':
-				$property = new phodevi_device_property('sw_kernel_architecture', phodevi::smart_caching);
-				break;
-			case 'kernel-date':
-				$property = new phodevi_device_property('sw_kernel_date', phodevi::smart_caching);
-				break;
-			case 'kernel-string':
-				$property = new phodevi_device_property('sw_kernel_string', phodevi::smart_caching);
-				break;
-			case 'kernel-parameters':
-				$property = new phodevi_device_property('sw_kernel_parameters', phodevi::std_caching);
-				break;
-			case 'compiler':
-				$property = new phodevi_device_property('sw_compiler', phodevi::std_caching);
-				break;
-			case 'system-layer':
-				$property = new phodevi_device_property('sw_system_layer', phodevi::std_caching);
-				break;
-			case 'environment-variables':
-				$property = new phodevi_device_property('sw_environment_variables', phodevi::std_caching);
-				break;
-		}
-
-		return $property;
+		return array(
+			'username' => new phodevi_device_property('sw_username', phodevi::std_caching),
+			'hostname' => new phodevi_device_property('sw_hostname', phodevi::smart_caching),
+			'vendor-identifier' => new phodevi_device_property('sw_vendor_identifier', phodevi::smart_caching),
+			'filesystem' => new phodevi_device_property('sw_filesystem', phodevi::no_caching),
+			'virtualized-mode' => new phodevi_device_property('sw_virtualized_mode', phodevi::smart_caching),
+			'java-version' => new phodevi_device_property('sw_java_version', phodevi::std_caching),
+			'python-version' => new phodevi_device_property('sw_python_version', phodevi::std_caching),
+			'wine-version' => new phodevi_device_property('sw_wine_version', phodevi::std_caching),
+			'display-server' => new phodevi_device_property('sw_display_server', phodevi::smart_caching),
+			'display-driver' => new phodevi_device_property(array('sw_display_driver', false), phodevi::smart_caching),
+			'display-driver-string' => new phodevi_device_property(array('sw_display_driver', true), phodevi::smart_caching),
+			'dri-display-driver' => new phodevi_device_property('sw_dri_display_driver', phodevi::smart_caching),
+			'opengl-driver' => new phodevi_device_property('sw_opengl_driver', phodevi::std_caching),
+			'vulkan-driver' => new phodevi_device_property('sw_vulkan_driver', phodevi::std_caching),
+			'opencl-driver' => new phodevi_device_property('sw_opencl_driver', phodevi::std_caching),
+			'opengl-vendor' => new phodevi_device_property('sw_opengl_vendor', phodevi::smart_caching),
+			'desktop-environment' => new phodevi_device_property('sw_desktop_environment', phodevi::smart_caching),
+			'operating-system' => new phodevi_device_property('sw_operating_system', phodevi::smart_caching),
+			'os-version' => new phodevi_device_property('sw_os_version', phodevi::smart_caching),
+			'kernel' => new phodevi_device_property('sw_kernel', phodevi::smart_caching),
+			'kernel-architecture' => new phodevi_device_property('sw_kernel_architecture', phodevi::smart_caching),
+			'kernel-date' => new phodevi_device_property('sw_kernel_date', phodevi::smart_caching),
+			'kernel-string' => new phodevi_device_property('sw_kernel_string', phodevi::smart_caching),
+			'kernel-parameters' => new phodevi_device_property('sw_kernel_parameters', phodevi::std_caching),
+			'compiler' => new phodevi_device_property('sw_compiler', phodevi::no_caching),
+			'system-layer' => new phodevi_device_property('sw_system_layer', phodevi::std_caching),
+			'environment-variables' => new phodevi_device_property('sw_environment_variables', phodevi::std_caching),
+			'security-features' => new phodevi_device_property('sw_security_features', phodevi::std_caching)
+			);
 	}
 	public static function sw_username()
 	{
@@ -391,7 +335,8 @@ class phodevi_system extends phodevi_device_interface
 		}
 		else if(phodevi::is_windows())
 		{
-			return null;
+			// TODO could use better detection to verify if C: or the desired disk under test... but most of the time will be NTFS anyways
+			return trim(shell_exec('powershell "(Get-Volume)[1].FileSystemType"'));
 		}
 
 		if(empty($fs))
@@ -533,7 +478,7 @@ class phodevi_system extends phodevi_device_interface
 	}
 	public static function sw_environment_variables()
 	{
-		$check_variables = array('LIBGL', '__GL', 'DRI_', 'DEBUG');
+		$check_variables = array('LIBGL', '__GL', 'DRI_', 'DEBUG', 'FLAGS');
 		$to_report = array();
 
 		if(stripos(phodevi::read_property('system', 'opengl-driver'), 'Mesa'))
@@ -547,7 +492,7 @@ class phodevi_system extends phodevi_device_interface
 			{
 				foreach($check_variables as $var)
 				{
-					if(stripos($name, $var) !== false && $name != '__GL_SYNC_TO_VBLANK')
+					if(stripos($name, $var) !== false && $name != '__GL_SYNC_TO_VBLANK' && strpos($name, 'GJS') === false)
 					{
 						array_push($to_report, $name . '=' . $value);
 						break;
@@ -558,6 +503,74 @@ class phodevi_system extends phodevi_device_interface
 		}
 
 		return implode(' ', array_unique($to_report));
+	}
+	public static function sw_security_features()
+	{
+		$security = array();
+		if(pts_client::executable_in_path('getenforce'))
+		{
+			$selinux = shell_exec('getenforce 2>&1');
+			if(strpos($selinux, 'Enforcing') !== false)
+			{
+				$security[] = 'SELinux';
+			}
+		}
+
+		// Meltdown / KPTI check
+		if(phodevi::is_linux())
+		{
+			if(is_file('/sys/devices/system/cpu/vulnerabilities/meltdown'))
+			{
+				if(pts_file_io::file_get_contents('/sys/devices/system/cpu/vulnerabilities/meltdown') == 'Mitigation: PTI')
+				{
+					// Kernel Page Table Isolation
+					$security[] = 'KPTI';
+				}
+			}
+			else if(strpos(phodevi::$vfs->dmesg, 'page tables isolation: enabled') !== false)
+			{
+				// Kernel Page Table Isolation
+				$security[] = 'KPTI';
+			}
+
+
+			// Spectre
+			foreach(array('spectre_v1', 'spectre_v2') as $vulns)
+			{
+				if(is_file('/sys/devices/system/cpu/vulnerabilities/' . $vulns))
+				{
+					$fc = file_get_contents('/sys/devices/system/cpu/vulnerabilities/' . $vulns);
+					if(($x = strpos($fc, ': ')) !== false)
+					{
+						$security[] = trim(substr($fc, $x + 2));
+					}
+				}
+			}
+		}
+		else if(phodevi::is_bsd())
+		{
+			// FreeBSD
+			if(phodevi_bsd_parser::read_sysctl('vm.pmap.pti') == '1')
+			{
+				$security[] = 'KPTI';
+			}
+			if(phodevi_bsd_parser::read_sysctl('hw.ibrs_active') == '1')
+			{
+				$security[] = 'IBRS';
+			}
+
+			// DragonFlyBSD
+			if(phodevi_bsd_parser::read_sysctl('machdep.spectre_mitigation') == '1')
+			{
+				$security[] = 'Spectre Mitigation';
+			}
+			if(phodevi_bsd_parser::read_sysctl('machdep.meltdown_mitigation') == '1')
+			{
+				$security[] = 'Meltdown Mitigation';
+			}
+		}
+
+		return !empty($security) ? implode(' + ',  $security) . ' Protection' : null;
 	}
 	public static function sw_compiler()
 	{
@@ -598,7 +611,7 @@ class phodevi_system extends phodevi_device_interface
 									$v = substr($v, 0, $t);
 								}
 
-								if(pts_strings::is_version($version))
+								if(pts_strings::is_version($v))
 								{
 									$version = $v;
 								}
@@ -617,6 +630,11 @@ class phodevi_system extends phodevi_device_interface
 						$compilers['gcc'] = 'GCC ' . $v;
 					}
 				}
+			}
+			// sometimes "copyright" slips into version string
+			if(isset($compilers['gcc']))
+			{
+				$compilers['gcc'] = str_replace('Copyright', '', $compilers['gcc']);
 			}
 		}
 
@@ -672,10 +690,10 @@ class phodevi_system extends phodevi_device_interface
 			$compilers['pgcpp'] = 'PGI C-C++ Workstation';
 		}
 
-		if(pts_client::executable_in_path('clang'))
+		if(($clang = pts_client::executable_in_path('clang')))
 		{
 			// Clang
-			$compiler_info = shell_exec('clang --version 2> /dev/null');
+			$compiler_info = shell_exec(escapeshellarg($clang) . ' --version');
 			if(($cv_pos = stripos($compiler_info, 'clang version')) !== false)
 			{
 				// With Clang 3.0 and prior, the --version produces output where the first line is:
@@ -1011,6 +1029,10 @@ class phodevi_system extends phodevi_device_interface
 				$os_version = pts_strings::keep_in_string($os_version, pts_strings::CHAR_LETTER | pts_strings::CHAR_NUMERIC | pts_strings::CHAR_DECIMAL | pts_strings::CHAR_SPACE | pts_strings::CHAR_DASH | pts_strings::CHAR_UNDERSCORE);
 			}
 		}
+		else if(phodevi::is_windows())
+		{
+			$os_version = phodevi_windows_parser::get_wmi_object('win32_operatingsystem', 'BuildNumber');
+		}
 		else
 		{
 			$os_version = php_uname('r');
@@ -1121,10 +1143,6 @@ class phodevi_system extends phodevi_device_interface
 
 			if($os == null)
 			{
-				if(phodevi::is_windows())
-				{
-					$os = trim(exec('ver'));
-				}
 				if(is_file('/etc/debian_version'))
 				{
 					$os = 'Debian ' . php_uname('s') . ' ' . ucwords(pts_file_io::file_get_contents('/etc/debian_version'));
@@ -1162,7 +1180,14 @@ class phodevi_system extends phodevi_device_interface
 		{
 			$os = phodevi_osx_parser::read_osx_system_profiler('SPSoftwareDataType', 'SystemVersion');
 		}
-
+		else if(phodevi::is_windows())
+		{
+			$os = $info = phodevi_windows_parser::get_wmi_object('win32_operatingsystem', 'caption') . ' Build ' . phodevi::read_property('system', 'os-version');
+			if(strpos($os, 'Windows') === false)
+			{
+				$os = trim(exec('ver'));
+			}
+		}	
 		if(($break_point = strpos($os, '(')) > 0)
 		{
 			$os = substr($os, 0, $break_point);
@@ -1231,11 +1256,20 @@ class phodevi_system extends phodevi_device_interface
 				$desktop_version = pts_strings::last_in_string(trim(shell_exec('mate-about --version 2> /dev/null')));
 			}
 		}
+		else if(($kde5 = pts_client::is_process_running('plasmashell')))
+		{
+			// KDE 5.x
+			$desktop_environment = 'KDE Plasma';
+			$desktop_version = pts_strings::last_in_string(trim(shell_exec('plasmashell --version 2> /dev/null')));
+		}
 		else if(($kde5 = pts_client::is_process_running('kded5')))
 		{
 			// KDE 5.x
-			$desktop_environment = 'KDE Frameworks 5';
-			$desktop_version = null; // TODO XXX
+			$desktop_environment = 'KDE Frameworks';
+			if(pts_client::executable_in_path('kdeinit5'))
+			{
+				$desktop_version = pts_strings::last_in_string(trim(shell_exec('kdeinit5 --version 2> /dev/null')));
+			}
 		}
 		else if(($dde = pts_client::is_process_running('dde-desktop')))
 		{
@@ -1279,6 +1313,14 @@ class phodevi_system extends phodevi_device_interface
 
 			$desktop_environment = $chrome_output;
 		}
+		else if(pts_client::is_process_running('lxqt-panel') || $desktop_session == 'lxqt')
+		{
+			//$lx_output = trim(shell_exec('lxqt-panel --version'));
+			//$version = substr($lx_output, strpos($lx_output, ' ') + 1);
+
+			$desktop_environment = 'LXQt';
+			//$desktop_version = $version;
+		}
 		else if(pts_client::is_process_running('lxsession') || $desktop_session == 'lxde')
 		{
 			$lx_output = trim(shell_exec('lxpanel --version'));
@@ -1286,6 +1328,12 @@ class phodevi_system extends phodevi_device_interface
 
 			$desktop_environment = 'LXDE';
 			$desktop_version = $version;
+		}
+		else if(pts_client::is_process_running('lumina-desktop'))
+		{
+			// Lumina Desktop Environment
+			$desktop_environment = 'Lumina';
+			$desktop_version = str_replace('"', '', trim(shell_exec('lumina-desktop --version 2>&1')));
 		}
 		else if(pts_client::is_process_running('xfce4-session') || pts_client::is_process_running('xfce-mcs-manager') || $desktop_session == 'xfce')
 		{
@@ -1438,7 +1486,22 @@ class phodevi_system extends phodevi_device_interface
 	{
 		if(phodevi::is_windows())
 		{
-			return null;
+			$windows_driver = phodevi_windows_parser::get_wmi_object('Win32_VideoController', 'DriverVersion');
+
+			if(($nvidia_smi = pts_client::executable_in_path('nvidia-smi')))
+			{
+				$smi_output = shell_exec(escapeshellarg($nvidia_smi) . ' -q -d CLOCK');
+				if(($v = stripos($smi_output, 'Driver Version')) !== false)
+				{
+					$nv_version = substr($smi_output, strpos($smi_output, ':', $v) + 1);
+					$nv_version = trim(substr($nv_version, 0, strpos($nv_version, "\n")));
+					if(pts_strings::is_version($nv_version))
+					{
+						$windows_driver = $nv_version . ' (' . $windows_driver . ')';
+					}
+				}
+			}
+			return $windows_driver;
 		}
 
 		$display_driver = phodevi::read_property('system', 'dri-display-driver');
@@ -1902,9 +1965,17 @@ class phodevi_system extends phodevi_device_interface
 	{
 		$python_version = null;
 
-		if(pts_client::executable_in_path('python') != false)
+		if(($p = pts_client::executable_in_path('python')) != false)
 		{
-			$python_version = trim(shell_exec('python -V 2>&1'));
+			$python_version = trim(shell_exec(escapeshellarg($p) . ' -V 2>&1'));
+		}
+		if(($p = pts_client::executable_in_path('python3')) != false)
+		{
+			$python3_version = trim(shell_exec(escapeshellarg($p) . ' -V 2>&1'));
+			if($python3_version != $python_version)
+			{
+				$python_version .= ' + ' . $python3_version;
+			}
 		}
 
 		return $python_version;

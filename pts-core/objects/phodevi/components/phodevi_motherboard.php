@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2017, Phoronix Media
-	Copyright (C) 2008 - 2017, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 	phodevi_motherboard.php: The PTS Device Interface object for the motherboard
 
 	This program is free software; you can redistribute it and/or modify
@@ -23,28 +23,16 @@
 
 class phodevi_motherboard extends phodevi_device_interface
 {
-	public static function read_property($identifier)
+	public static function properties()
 	{
-		switch($identifier)
-		{
-			case 'identifier':
-				$property = new phodevi_device_property('motherboard_string', phodevi::smart_caching);
-				break;
-			case 'serial-number':
-				$property = new phodevi_device_property('serial_number', phodevi::smart_caching);
-				break;
-			case 'power-mode':
-				$property = new phodevi_device_property('power_mode', phodevi::smart_caching);
-				break;
-			case 'pci-devices':
-				$property = new phodevi_device_property('pci_devices', phodevi::smart_caching);
-				break;
-			case 'usb-devices':
-				$property = new phodevi_device_property('usb_devices', phodevi::std_caching);
-				break;
-		}
-
-		return $property;
+		return array(
+			'identifier' => new phodevi_device_property('motherboard_string', phodevi::smart_caching),
+			'serial-number' => new phodevi_device_property('serial_number', phodevi::smart_caching),
+			'power-mode' => new phodevi_device_property('power_mode', phodevi::smart_caching),
+			'pci-devices' => new phodevi_device_property('pci_devices', phodevi::smart_caching),
+			'bios-version' => new phodevi_device_property('bios_version', phodevi::smart_caching),
+			'usb-devices' => new phodevi_device_property('usb_devices', phodevi::std_caching)
+			);
 	}
 	public static function usb_devices()
 	{
@@ -336,9 +324,44 @@ class phodevi_motherboard extends phodevi_device_interface
 		if(phodevi::is_linux())
 		{
 			$serial = phodevi_linux_parser::read_dmidecode('system', 'System Information', 'Serial Number', true, array());
+			if($serial == null)
+			{
+				$serial = phodevi_linux_parser::read_sys_dmi('board_serial');
+			}
+			if($serial == null)
+			{
+				$serial = phodevi_linux_parser::read_sys_dmi('product_serial');
+			}
+			if($serial == null)
+			{
+				$serial = phodevi_linux_parser::read_sys_dmi('product_uuid');
+			}
+		}
+		else if(phodevi::is_windows())
+		{
+			$serial = phodevi_windows_parser::get_wmi_object('Win32_BaseBoard', 'SerialNumber');
 		}
 
 		return $serial;
+	}
+	public static function bios_version()
+	{
+		$bios_version = null;
+		if(phodevi::is_bsd())
+		{
+			$bios_version = phodevi_bsd_parser::read_kenv('smbios.system.version');
+
+			if($bios_version == 'System Version')
+			{
+				$bios_version = null;
+			}
+		}
+		else if(phodevi::is_linux())
+		{
+			$bios_version = phodevi_linux_parser::read_sys_dmi('bios_version');
+		}
+
+		return trim(str_replace(array('(', ')'), '', $bios_version));
 	}
 	public static function motherboard_string()
 	{
@@ -365,7 +388,7 @@ class phodevi_motherboard extends phodevi_device_interface
 			$product = phodevi_bsd_parser::read_kenv('smbios.system.product');
 			$version = phodevi_bsd_parser::read_kenv('smbios.system.version'); // for at least Lenovo ThinkPads this is where it displays ThinkPad model
 
-			if($vendor != null && ($product != null || $version != null) && pts_strings::has_alpha($vendor))
+			if($vendor != null && ($product != null || $version != null) && pts_strings::has_alpha($vendor) && strpos($product, 'System') === false)
 			{
 				$info = $vendor . ' ' . $product . ' ' . $version;
 			}
@@ -373,13 +396,13 @@ class phodevi_motherboard extends phodevi_device_interface
 			{
 				$info = trim($vendor . ' ' . $version);
 			}
-			else if(($acpi = phodevi_bsd_parser::read_sysctl('dev.acpi.0.%desc')) != false && strpos($acpi, ' ') != null)
-			{
-				$info = trim($acpi);
-			}
 			else if(($product = phodevi_bsd_parser::read_kenv('smbios.planar.product')))
 			{
 				$info = trim(phodevi_bsd_parser::read_kenv('smbios.planar.maker') . ' ' . $product);
+			}
+			else if(($acpi = phodevi_bsd_parser::read_sysctl('dev.acpi.0.%desc')) != false && strpos($acpi, ' ') != null)
+			{
+				$info = trim($acpi);
 			}
 		}
 		else if(phodevi::is_linux())
@@ -468,7 +491,11 @@ class phodevi_motherboard extends phodevi_device_interface
 		}
 		else if(phodevi::is_windows())
 		{
-			$info = phodevi_windows_parser::read_cpuz('Mainboard Model', null);
+			$info = trim(phodevi_windows_parser::get_wmi_object('Win32_BaseBoard', 'Manufacturer') . ' ' . phodevi_windows_parser::get_wmi_object('Win32_BaseBoard', 'Product'));
+			if(empty($info))
+			{
+				$info = phodevi_windows_parser::get_wmi_object('Win32_MotherboardDevice', 'Name');
+			}
 		}
 
 		if((strpos($info, 'Mac ') !== false || strpos($info, 'MacBook') !== false) && strpos($info, 'Apple') === false)
@@ -478,6 +505,12 @@ class phodevi_motherboard extends phodevi_device_interface
 
 		// ensure words aren't repeated (e.g. VMware VMware Virtual and MSI MSI X58M (MS-7593))
 		$info = implode(' ', array_unique(explode(' ', $info)));
+
+		$bios = phodevi::read_property('motherboard', 'bios-version');
+		if(!empty($bios) && strpos($info, $bios) === false)
+		{
+			$info .= ' (' . $bios . ' BIOS)';
+		}
 
 		return $info;
 	}

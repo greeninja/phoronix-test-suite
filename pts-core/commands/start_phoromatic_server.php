@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2014 - 2016, Phoronix Media
-	Copyright (C) 2014 - 2016, Michael Larabel
+	Copyright (C) 2014 - 2018, Phoronix Media
+	Copyright (C) 2014 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -91,7 +91,15 @@ class start_phoromatic_server implements pts_option_interface
 			else
 			{
 				$web_port = $remote_access;
-				$web_socket_port = pts_config::read_user_config('PhoronixTestSuite/Options/Server/WebSocketPort', '');
+
+				if(($ws_port = getenv('PTS_WEBSOCKET_PORT')) != false && is_numeric($ws_port) && $ws_port > 1)
+				{
+					$web_socket_port = $ws_port;
+				}
+				else
+				{
+					$web_socket_port = pts_config::read_user_config('PhoronixTestSuite/Options/Server/WebSocketPort', '');
+				}
 
 				while($web_socket_port == null || !is_numeric($web_socket_port) || (($fp = fsockopen('127.0.0.1', $web_socket_port, $errno, $errstr, 5)) != false))
 				{
@@ -109,7 +117,7 @@ class start_phoromatic_server implements pts_option_interface
 
 		if(!extension_loaded('sqlite3'))
 		{
-			echo PHP_EOL . PHP_EOL . 'PHP SQLite3 support must first be enabled before accessing the Phoromatic server (e.g. installing the php5-sqlite or php-pdo package depending on the distribution).' . PHP_EOL . PHP_EOL;
+			echo PHP_EOL . PHP_EOL . pts_client::cli_just_bold('PHP SQLite3') . ' support must first be enabled before accessing the Phoromatic server (e.g. installing the php-sqlite or php-pdo package depending on the distribution).' . PHP_EOL . PHP_EOL;
 			return false;
 		}
 
@@ -243,6 +251,12 @@ class start_phoromatic_server implements pts_option_interface
 				$server_launcher .= 'avahi-publish -s phoromatic-server-' . $hostname . ' _http._tcp ' . $web_port . ' "Phoronix Test Suite Phoromatic" > /dev/null 2> /dev/null &' . PHP_EOL;
 				$server_launcher .= 'avahi_publish_pid=$!'. PHP_EOL;
 			}
+		}
+
+		// Zeroconf via OpenBenchmarking.org
+		if(pts_config::read_user_config('PhoronixTestSuite/Options/Server/AdvertiseServiceOpenBenchmarkRelay', 'TRUE') && pts_network::internet_support_available())
+		{
+			pts_openbenchmarking::make_openbenchmarking_request('phoromatic_server_relay', array('local_ip' => pts_network::get_local_ip(), 'local_port' => $web_port));
 		}
 
 		// Wait for input to shutdown process..

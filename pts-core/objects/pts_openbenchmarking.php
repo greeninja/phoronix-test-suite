@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2010 - 2017, Phoronix Media
-	Copyright (C) 2010 - 2017, Michael Larabel
+	Copyright (C) 2010 - 2018, Phoronix Media
+	Copyright (C) 2010 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -57,6 +57,10 @@ class pts_openbenchmarking
 			'file_system' => array('system', 'filesystem'),
 			'screen_resolution' => array('gpu', 'screen-resolution-string')
 			);
+	}
+	public static function openbenchmarking_standards_path()
+	{
+		return PTS_CORE_PATH . 'openbenchmarking.org/';
 	}
 	public static function is_valid_gsid_format($gsid)
 	{
@@ -113,6 +117,40 @@ class pts_openbenchmarking
 		}
 
 		return $is_id;
+	}
+	public static function result_uploads_from_this_ip()
+	{
+		$results = array();
+
+		if(pts_network::internet_support_available())
+		{
+			$json_response = pts_openbenchmarking::make_openbenchmarking_request('result_uploads_from_this_ip');
+			$json_response = json_decode($json_response, true);
+
+			if(is_array($json_response) && isset($json_response['uploads']['public_ids']))
+			{
+				$results = $json_response['uploads']['public_ids'];
+			}
+		}
+
+		return $results;
+	}
+	public static function possible_phoromatic_servers()
+	{
+		$results = array();
+
+		if(pts_network::internet_support_available())
+		{
+			$json_response = pts_openbenchmarking::make_openbenchmarking_request('phoromatic_server_relay_check');
+			$json_response = json_decode($json_response, true);
+
+			if(is_array($json_response) && isset($json_response['phoromatic']['possible_servers']))
+			{
+				$results = $json_response['phoromatic']['possible_servers'];
+			}
+		}
+
+		return $results;
 	}
 	public static function clone_openbenchmarking_result(&$id, $return_xml = false)
 	{
@@ -387,6 +425,12 @@ class pts_openbenchmarking
 	{
 		$repos = array('local', 'pts', 'system');
 
+		if(PTS_IS_CLIENT && phodevi::is_windows())
+		{
+			// Various windows tests for compatibility where there isn't mainline support in the test profile otherwise
+			array_unshift($repos, 'windows');
+		}
+
 		if(PTS_IS_CLIENT && pts_openbenchmarking_client::user_name() != false)
 		{
 			$repos[] = pts_openbenchmarking_client::user_name();
@@ -454,13 +498,13 @@ class pts_openbenchmarking
 
 		return $index_file;
 	}
-	public static function download_test_profile($qualified_identifier, $download_location = null)
+	public static function download_test_profile($qualified_identifier, $download_location = null, $cache_check = false)
 	{
 		if(empty($download_location))
 		{
 			$download_location = PTS_TEST_PROFILE_PATH;
 		}
-		if(is_file($download_location . $qualified_identifier . '/test-definition.xml'))
+		if(is_file($download_location . $qualified_identifier . '/test-definition.xml') && !$cache_check)
 		{
 			return true;
 		}
@@ -506,12 +550,15 @@ class pts_openbenchmarking
 					$test_profile = $b64;
 				}
 
-				file_put_contents($file, $test_profile);
+				if(!empty($test_profile))
+				{
+					file_put_contents($file, $test_profile);
+				}
 			}
 
 			if(PTS_IS_CLIENT && !is_file($file))
 			{
-				trigger_error('Network support is needed to obtain ' . $qualified_identifier . ' data.' . PHP_EOL, E_USER_ERROR);
+				trigger_error('Unable to to obtain ' . $qualified_identifier . ' from OpenBenchmarking.org. If this issue persists please contact support@phoronix-test-suite.com.' . PHP_EOL, E_USER_ERROR);
 				return false;
 			}
 		}
@@ -535,6 +582,44 @@ class pts_openbenchmarking
 			}
 		}
 
+		return false;
+	}
+	public static function remote_test_profile_check($identifier)
+	{
+		// See if the test (e.g. a local/ test) is available for download from Phoromatic Servers that is not part of an Openbenchmarking.org repo index
+		if(PTS_IS_CLIENT == false)
+		{
+			return false;
+		}
+		$is_test = self::phoromatic_server_ob_cache_request('is_test', null, $identifier);
+		if(!empty($is_test) && strpos($is_test, ' ') === false && strpos($is_test, '..') === false && strpos($is_test, '/') !== false)
+		{
+			if($test_profile = self::phoromatic_server_ob_cache_request('test', substr($is_test, 0, strpos($is_test, '/')), substr($is_test, strpos($is_test, '/') + 1)))
+			{
+				$test_zip = base64_decode($test_profile);
+				if(!empty($test_zip))
+				{
+					$zip_file = tempnam(sys_get_temp_dir(), 'phoromatic-zip');
+					file_put_contents($zip_file, $test_zip);
+
+					// Extract the temp zip
+					$download_location = PTS_TEST_PROFILE_PATH;
+					if(!is_file($download_location . $is_test . '/test-definition.xml') && is_file($zip_file))
+					{
+						// extract it
+						pts_file_io::mkdir($download_location . dirname($is_test));
+						pts_file_io::mkdir($download_location . $is_test);
+						pts_compression::zip_archive_extract($zip_file, $download_location . $is_test);
+
+						if(is_file(PTS_TEST_PROFILE_PATH . $is_test . '/test-definition.xml'))
+						{
+							return true;
+						}
+					}
+					unlink($zip_file);
+				}
+			}
+		}
 		return false;
 	}
 	public static function phoromatic_server_ob_cache_request($type_request, $repo = null, $test = null)
@@ -632,13 +717,13 @@ class pts_openbenchmarking
 
 		return $available_suites;
 	}
-	public static function download_test_suite($qualified_identifier, $download_location = null)
+	public static function download_test_suite($qualified_identifier, $download_location = null, $cache_check = false)
 	{
 		if(empty($download_location))
 		{
 			$download_location = PTS_TEST_SUITE_PATH;
 		}
-		if(is_file($download_location . $qualified_identifier . '/suite-definition.xml'))
+		if(is_file($download_location . $qualified_identifier . '/suite-definition.xml') && !$cache_check)
 		{
 			return true;
 		}
@@ -650,6 +735,10 @@ class pts_openbenchmarking
 			$hash_json = pts_openbenchmarking::make_openbenchmarking_request('suite_hash', array('i' => $qualified_identifier));
 			$hash_json = json_decode($hash_json, true);
 			$hash_check = isset($hash_json['openbenchmarking']['suite']['hash']) ? $hash_json['openbenchmarking']['suite']['hash'] : null;  // should also check for ['openbenchmarking']['suite']['error'] problems
+		}
+		else
+		{
+			$hash_check = null;
 		}
 
 		if(!is_file($file))
@@ -677,12 +766,15 @@ class pts_openbenchmarking
 					$test_suite = $b64;
 				}
 
-				file_put_contents($file, $test_suite);
+				if(!empty($test_suite))
+				{
+					file_put_contents($file, $test_suite);
+				}
 			}
 
 			if(PTS_IS_CLIENT && !is_file($file))
 			{
-				trigger_error('Network support is needed to obtain ' . $qualified_identifier . ' data.' . PHP_EOL, E_USER_ERROR);
+				trigger_error('Unable to to obtain to obtain ' . $qualified_identifier . ' from OpenBenchmarking.org.  If this issue persists please contact support@phoronix-test-suite.com.' . PHP_EOL, E_USER_ERROR);
 				return false;
 			}
 		}

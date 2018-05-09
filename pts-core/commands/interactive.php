@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2011 - 2016, Phoronix Media
-	Copyright (C) 2011 - 2016, Michael Larabel
+	Copyright (C) 2011 - 2018, Phoronix Media
+	Copyright (C) 2011 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -29,7 +29,8 @@ class interactive implements pts_option_interface
 	{
 		pts_openbenchmarking::refresh_repository_lists();
 		pts_client::$display->generic_heading('Interactive Benchmarking');
-		echo 'System Hardware:' . PHP_EOL . phodevi::system_hardware(true) . (phodevi::read_property('motherboard', 'serial-number') != null ? PHP_EOL . 'System Serial Number: ' . phodevi::read_property('motherboard', 'serial-number') : null) . PHP_EOL . PHP_EOL . PHP_EOL;
+		echo phodevi::system_centralized_view();
+		echo PHP_EOL . (phodevi::read_property('motherboard', 'serial-number') != null ? PHP_EOL . 'System Serial Number: ' . phodevi::read_property('motherboard', 'serial-number') : null) . PHP_EOL . PHP_EOL;
 		$reboot_on_exit = false;
 
 		do
@@ -39,8 +40,11 @@ class interactive implements pts_option_interface
 				'RUN_SUITE' => 'Run A Suite [A Collection Of Tests]',
 				'RUN_SYSTEM_TEST' => 'Run Complex System Test',
 				'SHOW_INFO' => 'Show System Hardware / Software Information',
-				'SHOW_SENSORS' => 'Show Auto-Detected System Sensors',
-				'SET_RUN_COUNT' => 'Set Test Run Repetition'
+				'SHOW_SENSORS' => 'Show Available System Sensors',
+				'LIST_TESTS' => 'List Available Tests',
+				'LIST_RECOMMENDED_TESTS' => 'List Recommended Tests',
+				'SET_RUN_COUNT' => 'Set Test Run Repetition',
+				'SEARCH' => 'Search Tests / Suites / Results'
 				);
 
 			if(count(pts_client::saved_test_results()) > 0)
@@ -109,6 +113,9 @@ class interactive implements pts_option_interface
 				case 'SELECT_DRIVE_MOUNT':
 					self::select_drive_mount();
 					break;
+				case 'SEARCH':
+					pts_client::execute_command('search');
+					break;
 				case 'RUN_SYSTEM_TEST':
 					pts_client::$display->generic_heading('System Test');
 					$system_tests = array('apache', 'c-ray', 'ramspeed', 'postmark');
@@ -121,12 +128,16 @@ class interactive implements pts_option_interface
 					}
 					break;
 				case 'SHOW_INFO':
-					pts_client::$display->generic_heading('System Software / Hardware Information');
-					echo 'Hardware:' . PHP_EOL . phodevi::system_hardware(true) . PHP_EOL . PHP_EOL;
-					echo 'Software:' . PHP_EOL . phodevi::system_software(true) . PHP_EOL . PHP_EOL;
+					pts_client::execute_command('system_info');
 					break;
 				case 'SHOW_SENSORS':
 					pts_client::execute_command('system_sensors');
+					break;
+				case 'LIST_TESTS':
+					pts_client::execute_command('list_available_tests');
+					break;
+				case 'LIST_RECOMMENDED_TESTS':
+					pts_client::execute_command('list_recommended_tests');
 					break;
 				case 'SET_RUN_COUNT':
 					$run_count = pts_user_io::prompt_user_input('Set the minimum number of times each test should repeat', false);
@@ -134,19 +145,20 @@ class interactive implements pts_option_interface
 					break;
 				case 'BACKUP_RESULTS_TO_USB':
 					pts_client::$display->generic_heading('Backing Up Test Results');
-
-					foreach(pts_file_io::glob('/media/*') as $media_dir)
+					$writable_backup_locations = array();
+					foreach(array_merge(pts_file_io::glob('/media/*'), pts_file_io::glob('/run/media/*/*')) as $media_dir)
 					{
-						if(!is_writable($media_dir))
+						if(is_writable($media_dir))
 						{
-							echo PHP_EOL . $media_dir . ' is not writable.' . PHP_EOL;
-							continue;
+							$writable_backup_locations[] = $media_dir;
 						}
-
-						echo PHP_EOL . 'Writing Test Results To: ' . $media_dir . PHP_EOL;
-						pts_file_io::copy(PTS_SAVE_RESULTS_PATH, $media_dir . '/');
-						break;
 					}
+
+					$backup_location = pts_user_io::prompt_text_menu('Select Backup Location', $writable_backup_locations);
+					$backup_location .= '/phoronix-test-suite-test-results/';
+					pts_file_io::mkdir($backup_location);
+					echo PHP_EOL . pts_client::cli_just_bold('Writing Test Results To: ') . $backup_location . PHP_EOL;
+					pts_file_io::copy(PTS_SAVE_RESULTS_PATH, $backup_location . '/');
 					break;
 			}
 			echo PHP_EOL . PHP_EOL;
@@ -161,7 +173,7 @@ class interactive implements pts_option_interface
 				exec('umount /media/pts-auto-mount 2>&1');
 			}
 
-			exec('reboot');
+			phodevi::reboot();
 		}
 	}
 	private static function select_drive_mount()

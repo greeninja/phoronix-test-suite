@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2016, Phoronix Media
-	Copyright (C) 2008 - 2016, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -114,7 +114,7 @@ class pts_result_file
 	{
 		$dom = new DOMDocument();
 		$dom->loadXML($this->get_xml());
-		return $dom->schemaValidate(PTS_OPENBENCHMARKING_PATH . 'schemas/result-file.xsd');
+		return $dom->schemaValidate(pts_openbenchmarking::openbenchmarking_standards_path() . 'schemas/result-file.xsd');
 	}
 	public function __toString()
 	{
@@ -674,6 +674,39 @@ class pts_result_file
 			$this->add_to_result_file($result_file);
 			unset($result_file);
 		}
+	}
+	public function contains_system_hardware($search)
+	{
+		foreach($this->get_system_hardware() as $h)
+		{
+			if(stripos($h, $search) !== false)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+	public function contains_system_software($search)
+	{
+		foreach($this->get_system_software() as $s)
+		{
+			if(stripos($s, $search) !== false)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+	public function contains_test($search)
+	{
+		foreach($this->get_contained_test_profiles() as $test_profile)
+		{
+			if(stripos($test_profile->get_identifier(), $search) !== false || stripos($test_profile->get_title(), $search) !== false)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }
 

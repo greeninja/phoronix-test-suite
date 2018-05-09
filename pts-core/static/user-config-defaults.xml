@@ -13,6 +13,7 @@
 			<DefaultDisplayMode>DEFAULT</DefaultDisplayMode>
 			<PhoromaticServers></PhoromaticServers>
 			<FullOutput>FALSE</FullOutput>
+			<ColoredConsole>AUTO</ColoredConsole>
 		</General>
 		<Modules>
 			<LoadModules>toggle_screensaver, update_checker, perf_tips, ob_auto_compare</LoadModules>
@@ -38,7 +39,7 @@
 			<LimitDynamicToTestLength>20</LimitDynamicToTestLength>
 			<StandardDeviationThreshold>3.50</StandardDeviationThreshold>
 			<ExportResultsTo></ExportResultsTo>
-			<MinimalTestTime>3</MinimalTestTime>
+			<MinimalTestTime>2</MinimalTestTime>
 		</TestResultValidation>
 		<ExternalHooks>
 			<PreTestProcess></PreTestProcess>
@@ -69,6 +70,7 @@
 			<Password></Password>
 			<WebSocketPort>RANDOM</WebSocketPort>
 			<AdvertiseServiceZeroConf>TRUE</AdvertiseServiceZeroConf>
+			<AdvertiseServiceOpenBenchmarkRelay>TRUE</AdvertiseServiceOpenBenchmarkRelay>
 			<PhoromaticStorage>~/.phoronix-test-suite/phoromatic/</PhoromaticStorage>
 		</Server>
 	</Options>

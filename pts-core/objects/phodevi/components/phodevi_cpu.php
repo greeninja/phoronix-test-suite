@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2017, Phoronix Media
-	Copyright (C) 2008 - 2017, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 	phodevi_cpu.php: The PTS Device Interface object for the CPU / processor
 
 	This program is free software; you can redistribute it and/or modify
@@ -27,52 +27,23 @@ class phodevi_cpu extends phodevi_device_interface
 	public static $cpuinfo = false;
 	private static $cpu_flags = -1;
 
-	public static function read_property($identifier)
+	public static function properties()
 	{
-		switch($identifier)
-		{
-			case 'identifier':
-				$property = new phodevi_device_property('cpu_string', phodevi::smart_caching);
-				break;
-			case 'model':
-				$property = new phodevi_device_property('cpu_model', phodevi::smart_caching);
-				break;
-			case 'model-and-speed':
-				$property = new phodevi_device_property('cpu_model_and_speed', phodevi::smart_caching);
-				break;
-			case 'mhz-default-frequency':
-				$property = new phodevi_device_property('cpu_default_frequency_mhz', phodevi::smart_caching);
-				break;
-			case 'default-frequency':
-				$property = new phodevi_device_property(array('cpu_default_frequency', 0), phodevi::smart_caching);
-				break;
-			case 'core-count':
-				$property = new phodevi_device_property('cpu_core_count', phodevi::std_caching);
-				break;
-			case 'physical-core-count':
-				$property = new phodevi_device_property('cpu_physical_core_count', phodevi::std_caching);
-				break;
-			case 'thread-count':
-				$property = new phodevi_device_property('cpu_thread_count', phodevi::std_caching);
-				break;
-			case 'node-count':
-				$property = new phodevi_device_property('cpu_node_count', phodevi::smart_caching);
-				break;
-			case 'scaling-governor':
-				$property = new phodevi_device_property('cpu_scaling_governor', phodevi::std_caching);
-				break;
-			case 'microcode-version':
-				$property = new phodevi_device_property('cpu_microcode_version', phodevi::smart_caching);
-				break;
-			case 'cache-size':
-				$property = new phodevi_device_property('cpu_cache_size', phodevi::smart_caching);
-				break;
-			case 'cache-size-string':
-				$property = new phodevi_device_property('cpu_cache_size_string', phodevi::smart_caching);
-				break;
-		}
-
-		return $property;
+		return array(
+			'identifier' => new phodevi_device_property('cpu_string', phodevi::smart_caching),
+			'model' => new phodevi_device_property('cpu_model', phodevi::smart_caching),
+			'model-and-speed' => new phodevi_device_property('cpu_model_and_speed', phodevi::smart_caching),
+			'mhz-default-frequency' => new phodevi_device_property('cpu_default_frequency_mhz', phodevi::smart_caching),
+			'default-frequency' => new phodevi_device_property(array('cpu_default_frequency', 0), phodevi::smart_caching),
+			'core-count' => new phodevi_device_property('cpu_core_count', phodevi::std_caching),
+			'physical-core-count' => new phodevi_device_property('cpu_physical_core_count', phodevi::std_caching),
+			'thread-count' => new phodevi_device_property('cpu_thread_count', phodevi::std_caching),
+			'node-count' => new phodevi_device_property('cpu_node_count', phodevi::smart_caching),
+			'scaling-governor' => new phodevi_device_property('cpu_scaling_governor', phodevi::std_caching),
+			'microcode-version' => new phodevi_device_property('cpu_microcode_version', phodevi::std_caching),
+			'cache-size' => new phodevi_device_property('cpu_cache_size', phodevi::smart_caching),
+			'cache-size-string' => new phodevi_device_property('cpu_cache_size_string', phodevi::smart_caching)
+			);
 	}
 	public static function cpu_string()
 	{
@@ -188,6 +159,10 @@ class phodevi_cpu extends phodevi_device_interface
 		{
 			$physical_cores = intval(phodevi_bsd_parser::read_sysctl(array('hw.physicalcpu')));
 		}
+		else if(phodevi::is_windows())
+		{
+			$physical_cores = phodevi_windows_parser::get_wmi_object('Win32_Processor', 'NumberOfCores');
+		}
 
 		if(empty($physical_cores) || !is_numeric($physical_cores))
 		{
@@ -198,7 +173,17 @@ class phodevi_cpu extends phodevi_device_interface
 	}
 	public static function cpu_thread_count()
 	{
-		return phodevi::is_linux() ? phodevi_cpu::cpuinfo_thread_count() : phodevi::read_property('cpu', 'core-count');
+		$threads = null;
+		if(phodevi::is_linux())
+		{
+			$threads = phodevi_cpu::cpuinfo_thread_count();
+		}
+		else
+		{
+			$threads = phodevi::read_property('cpu', 'core-count');
+		}
+
+		return $threads;
 	}
 	public static function cpu_node_count()
 	{
@@ -229,6 +214,10 @@ class phodevi_cpu extends phodevi_device_interface
 			{
 				$cache_size = substr($cache_size, 0, strpos($cache_size, ' ')) * 1024;
 			}
+		}
+		else if(phodevi::is_windows())
+		{
+			$cache_size = phodevi_windows_parser::get_wmi_object('Win32_Processor', 'L2CacheSize');
 		}
 
 		return $cache_size;
@@ -283,27 +272,29 @@ class phodevi_cpu extends phodevi_device_interface
 		// Find out the processor frequency
 		$info = null;
 		// First, the ideal way, with modern CPUs using CnQ or EIST and cpuinfo reporting the current
-		if(is_file('/sys/devices/system/cpu/cpu' . $cpu_core . '/cpufreq/scaling_max_freq'))
+		if(phodevi::is_linux())
 		{
-			$info = pts_file_io::file_get_contents('/sys/devices/system/cpu/cpu' . $cpu_core . '/cpufreq/scaling_max_freq');
-			$info = intval($info) / 1000000;
-
-			if($info > 9)
+			if(is_file('/sys/devices/system/cpu/cpu' . $cpu_core . '/cpufreq/scaling_max_freq'))
 			{
-				// For some reason on Linux 3.10 the scaling_max_freq is reported as 25GHz...
-				$info = null;
+				$info = pts_file_io::file_get_contents('/sys/devices/system/cpu/cpu' . $cpu_core . '/cpufreq/scaling_max_freq');
+				$info = intval($info) / 1000000;
+
+				if($info > 9)
+				{
+					// For some reason on Linux 3.10 the scaling_max_freq is reported as 25GHz...
+					$info = null;
+				}
 			}
-		}
-
-		if($info == null && isset(phodevi::$vfs->cpuinfo)) // fall back for those without cpufreq
-		{
-			$cpu_mhz = self::read_cpuinfo_line('cpu MHz');
-			$info = $cpu_mhz / 1000;
-
-			if(empty($info))
+			if($info == null && isset(phodevi::$vfs->cpuinfo)) // fall back for those without cpufreq
 			{
-				$cpu_mhz = self::read_cpuinfo_line('clock');
+				$cpu_mhz = self::read_cpuinfo_line('cpu MHz');
 				$info = $cpu_mhz / 1000;
+
+				if(empty($info))
+				{
+					$cpu_mhz = self::read_cpuinfo_line('clock');
+					$info = $cpu_mhz / 1000;
+				}
 			}
 		}
 		else if($info == null && phodevi::is_bsd())
@@ -343,15 +334,14 @@ class phodevi_cpu extends phodevi_device_interface
 		}
 		else if($info == null && phodevi::is_windows())
 		{
-			$info = phodevi_windows_parser::read_cpuz('Processor 1', 'Stock frequency');
-			if($info != null)
+			$info = phodevi_windows_parser::get_wmi_object('win32_processor', 'MaxClockSpeed');
+			if($info != null && is_numeric($info))
 			{
-				if(($e = strpos($info, ' MHz')) !== false)
-				{
-					$info = substr($info, 0, $e);
-				}
-
 				$info = $info / 1000;
+			}
+			else
+			{
+				$info = null;
 			}
 		}
 		else if($info == null)
@@ -474,7 +464,7 @@ class phodevi_cpu extends phodevi_device_interface
 		}
 		else if(phodevi::is_windows())
 		{
-			$info = phodevi_windows_parser::read_cpuz('Processor 1', 'Name');
+			$info = phodevi_windows_parser::get_wmi_object('win32_processor', 'Name');
 
 			if(!$info)
 			{
@@ -484,7 +474,15 @@ class phodevi_cpu extends phodevi_device_interface
 
 		if(empty($info))
 		{
-			$info = 'Unknown';
+			if(phodevi::is_linux() && strpos(phodevi::$vfs->dmesg, 'thunderx') !== false)
+			{
+				// Haven't found a better way to detect ThunderX as not exposed via cpuinfo, etc
+				$info = 'Cavium ThunderX';
+			}
+			else
+			{
+				$info = 'Unknown';
+			}
 		}
 		else
 		{

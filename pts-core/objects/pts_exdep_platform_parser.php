@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2012 - 2017, Phoronix Media
-	Copyright (C) 2012 - 2017, Michael Larabel
+	Copyright (C) 2012 - 2018, Phoronix Media
+	Copyright (C) 2012 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -30,12 +30,13 @@ class pts_exdep_platform_parser
 
 		if(PTS_IS_CLIENT)
 		{
-			$xml = PTS_EXDEP_PATH . 'xml/' . $identifier . '-packages.xml';
+			$xml = pts_exdep_generic_parser::get_external_dependency_path() . 'xml/' . $identifier . '-packages.xml';
 			$xml_options = LIBXML_COMPACT | LIBXML_PARSEHUGE;
 			$xml = simplexml_load_file($xml, 'SimpleXMLElement', $xml_options);
 
 			$this->struct['external-dependencies']['name'] = isset($xml->ExternalDependencies->Information->Name) ? $xml->ExternalDependencies->Information->Name->__toString() : null;
 			$this->struct['external-dependencies']['package_manager'] = isset($xml->ExternalDependencies->Information->PackageManager) ? $xml->ExternalDependencies->Information->PackageManager->__toString() : null;
+			$this->struct['external-dependencies']['warn_on_unmet_dependencies'] = isset($xml->ExternalDependencies->Information->WarnOnUnmetDependencies) ? $xml->ExternalDependencies->Information->WarnOnUnmetDependencies->__toString() : null;
 
 			if(isset($xml->ExternalDependencies) && isset($xml->ExternalDependencies->Package))
 			{
@@ -75,6 +76,10 @@ class pts_exdep_platform_parser
 				}
 			}
 		}
+	}
+	public function skip_warning_on_unmet_dependencies()
+	{
+		return strtolower($this->struct['external-dependencies']['warn_on_unmet_dependencies']) == 'false';
 	}
 	public function get_package_format($distro_package = null, $file_check = null, $arch_specific = null)
 	{

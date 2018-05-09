@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2010 - 2016, Phoronix Media
-	Copyright (C) 2010 - 2016, Michael Larabel
+	Copyright (C) 2010 - 2018, Phoronix Media
+	Copyright (C) 2010 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -171,6 +171,11 @@ class pts_types
 				$objects[] = new pts_result_file($identifier_item);
 			}
 		}
+		else if(PTS_IS_CLIENT && pts_openbenchmarking::remote_test_profile_check($identifier_item) && ($tp_identifier = pts_test_profile::is_test_profile($identifier_item)))
+		{
+			// Object is a test profile fetched from a remote OpenBenchmarking / Phoromatic Server
+			$objects[] = new pts_test_profile($tp_identifier);
+		}
 		else if(PTS_IS_CLIENT && pts_virtual_test_suite::is_virtual_suite($identifier_item))
 		{
 			// Object is a virtual suite
@@ -206,7 +211,7 @@ class pts_types
 	{
 		$values = array();
 		$dom = new DOMDocument();
-		$dom->load(PTS_OPENBENCHMARKING_PATH . 'schemas/types.xsd');
+		$dom->load(pts_openbenchmarking::openbenchmarking_standards_path() . 'schemas/types.xsd');
 		$types = $dom->getElementsByTagName('schema')->item(0)->getElementsByTagName('simpleType');
 
 		for($i = 0; $i < $types->length; $i++)

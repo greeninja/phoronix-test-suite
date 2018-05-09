@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2017, Phoronix Media
-	Copyright (C) 2008 - 2017, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -42,6 +42,10 @@ class pts_test_execution
 
 		// Do the actual test running process
 		$test_directory = $test_run_request->test_profile->get_install_dir();
+		if(phodevi::is_windows())
+		{
+			$test_directory = str_replace(array('//', '/', '\\\\'), DIRECTORY_SEPARATOR, $test_directory);
+		}
 
 		if(!is_dir($test_directory))
 		{
@@ -117,6 +121,10 @@ class pts_test_execution
 		{
 			$execute_binary_prepend = $test_run_request->exec_binary_prepend;
 		}
+        else if(getenv('EXECUTE_BINARY_PREPEND') != false)
+        {
+			$execute_binary_prepend = getenv('EXECUTE_BINARY_PREPEND') . ' ';
+        }
 
 		if(!$cache_share_present && !$test_run_manager->DEBUG_no_test_execution_just_result_parse && $test_run_request->test_profile->is_root_required())
 		{
@@ -177,7 +185,8 @@ class pts_test_execution
 			$test_extra_runtime_variables = array_merge($extra_runtime_variables, array(
 			'LOG_FILE' => $test_log_file,
 			'DISPLAY' => getenv('DISPLAY'),
-			'PATH' => getenv('PATH'),
+			'PATH' => pts_client::get_path(),
+			'DEBUG_PATH' => pts_client::get_path(),
 			));
 
 			$restored_from_cache = false;
@@ -210,11 +219,35 @@ class pts_test_execution
 
 				pts_client::test_profile_debug_message('Test Run Command: ' . $test_run_command);
 
+				$host_env = $_SERVER;
+				unset($host_env['argv']);
+				$use_phoroscript = phodevi::is_windows();
+				$to_exec = 'exec';
+				$post_test_args = ' 2>&1';
+				if(phodevi::is_windows())
+				{
+					if(is_executable('C:\Windows\System32\cmd.exe') && (pts_file_io::file_get_contents_first_line($to_execute . '/' . $execute_binary) == '@echo off' || substr($execute_binary, -4) == '.bat'))
+					{
+						pts_client::$display->test_run_message('Using cmd.exe batch...');
+						$to_exec = 'C:\Windows\System32\cmd.exe';
+						$execute_binary_prepend = ' /c ';
+						$use_phoroscript = false;
+						$post_test_args = '';
+					}
+					else if(is_executable('C:\cygwin64\bin\bash.exe') && pts_file_io::file_get_contents_first_line($to_execute . '/' . $execute_binary) != '#PHOROSCRIPT')
+					{
+						$to_exec = 'C:\cygwin64\bin\bash.exe';
+						$use_phoroscript = false;
+						$test_extra_runtime_variables['PATH'] = (isset($test_extra_runtime_variables['PATH']) ? $test_extra_runtime_variables['PATH'] : null) . ';C:\cygwin64\bin';
+					}
+				}
+
 				$is_monitoring = pts_test_result_parser::system_monitor_task_check($test_run_request);
 				$test_run_time_start = microtime(true);
 
-				if(phodevi::is_windows() || pts_client::read_env('USE_PHOROSCRIPT_INTERPRETER') != false)
+				if($use_phoroscript || pts_client::read_env('USE_PHOROSCRIPT_INTERPRETER') != false)
 				{
+					pts_client::$display->test_run_message('Making use of PhoroScript code path...');
 					$phoroscript = new pts_phoroscript_interpreter($to_execute . '/' . $execute_binary, $test_extra_runtime_variables, $to_execute);
 					$phoroscript->execute_script($pts_test_arguments);
 					$test_result_std_output = null;
@@ -224,11 +257,11 @@ class pts_test_execution
 					//$test_result_std_output = pts_client::shell_exec($test_run_command, $test_extra_runtime_variables);
 					$descriptorspec = array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
 
-					if(getenv('XAUTHORITY'))
+					if(pts_client::executable_in_path(trim($test_prepend)))
 					{
-						$test_extra_runtime_variables['XAUTHORITY'] = getenv('XAUTHORITY');
+						$to_exec = '';
 					}
-					$test_process = proc_open($test_prepend . 'exec ' . $execute_binary_prepend . './' . $execute_binary . ' ' . $pts_test_arguments . ' 2>&1', $descriptorspec, $pipes, $to_execute, array_merge($_ENV, pts_client::environmental_variables(), $test_extra_runtime_variables));
+					$test_process = proc_open($test_prepend . $to_exec . ' ' . $execute_binary_prepend . './' . $execute_binary . ' ' . $pts_test_arguments . $post_test_args, $descriptorspec, $pipes, $to_execute, array_merge($host_env, pts_client::environmental_variables(), $test_extra_runtime_variables));
 
 					if(is_resource($test_process))
 					{
@@ -242,7 +275,7 @@ class pts_test_execution
 				}
 
 				$test_run_time = microtime(true) - $test_run_time_start;
-				$test_run_request->test_run_times[] = $test_run_time;
+				$test_run_request->test_run_times[] = pts_math::set_precision($test_run_time, 2);
 
 				$exit_status_pass = true;
 				if(is_file($test_directory . 'test-exit-status'))
@@ -299,8 +332,11 @@ class pts_test_execution
 					}
 				}
 			}
-
-			if(!in_array(($i + 1), $ignore_runs) && $exit_status_pass)
+			if(in_array(($i + 1), $ignore_runs))
+			{
+				pts_client::$display->test_run_instance_error('Ignoring run result per test profile definition.');
+			}
+			else if($exit_status_pass)
 			{
 				// if it was monitoring, active result should already be set
 				if(!$produced_monitoring_result) // XXX once single-run-multiple-outputs is supported, this check can be disabled to allow combination of results
@@ -572,12 +608,6 @@ class pts_test_execution
 			$sub_tr->set_used_arguments($extra_arguments);
 		}
 
-		// Any device notes to add to PTS test notes area?
-		foreach(phodevi::read_device_notes($test_type) as $note)
-		{
-			pts_test_notes_manager::add_note($note);
-		}
-
 		// Result Calculation
 
 		// Ending Tasks
@@ -739,8 +769,10 @@ class pts_test_execution
 			{
 				$end_result = $test_result->active->get_result();
 
+				$test_result->test_run_times = $root_tr->test_run_times;
+
 				// removed count($result) > 0 in the move to pts_test_result
-				if(count($test_result) > 0 && ((is_numeric($end_result) && $end_result > 0) || (!is_numeric($end_result) && isset($end_result[3]))))
+				if(((is_numeric($end_result) && $end_result > 0) || (!is_numeric($end_result) && isset($end_result[3]))))
 				{
 					pts_module_manager::module_process('__post_test_run_success', $test_result);
 					$test_successful = true;

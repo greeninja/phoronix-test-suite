@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2017, Phoronix Media
-	Copyright (C) 2008 - 2017, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -112,8 +112,7 @@ class pts_render
 			{
 				$normalize_against = false;
 			}
-
-			$result_object->normalize_buffer_values($normalize_against);
+			$result_object->normalize_buffer_values($normalize_against, $extra_attributes);
 		}
 		if(isset($extra_attributes['sort_result_buffer_values']))
 		{
@@ -135,6 +134,8 @@ class pts_render
 		{
 			return false;
 		}
+
+		$horizontal_bars = pts_graph_core::get_graph_config('style', 'bar_graphs_horizontal') && !isset($extra_attributes['vertical_bars']);
 
 		if($result_file != null)
 		{
@@ -164,7 +165,7 @@ class pts_render
 			// Removing the command fixes cases like: 1210053-BY-MYRESULTS43
 			if(isset($extra_attributes['compact_to_scalar']) || isset($extra_attributes['compact_scatter']) || $result_file->is_multi_way_comparison($result_identifiers, $extra_attributes))
 			{
-				if((isset($extra_attributes['compact_to_scalar']) || (false && $result_file->is_multi_way_comparison($result_identifiers, $extra_attributes))) && in_array($result_object->test_profile->get_display_format(), array('LINE_GRAPH', 'FILLED_LINE_GRAPH')))
+				if((isset($extra_attributes['compact_to_scalar']) || (false && $result_file->is_multi_way_comparison($result_identifiers, $extra_attributes))) && in_array($result_object->test_profile->get_display_format(), array('LINE_GRAPH', 'FILLED_LINE_GRAPH')) && pts_graph_core::get_graph_config('style', 'allow_box_plots'))
 				{
 					// Convert multi-way line graph into horizontal box plot
 					$result_object->test_profile->set_display_format('HORIZONTAL_BOX_PLOT');
@@ -186,7 +187,7 @@ class pts_render
 				}
 			}
 
-			if(in_array($result_object->test_profile->get_display_format(), array('LINE_GRAPH')))
+			if(in_array($result_object->test_profile->get_display_format(), array('LINE_GRAPH')) && !isset($extra_attributes['force_tracking_line_graph']))
 			{
 					// Check to see for line graphs if every result is an array of the same result (i.e. a flat line for every result).
 					// If all the results are just flat lines, you might as well convert it to a bar graph
@@ -224,7 +225,7 @@ class pts_render
 
 						$result_object->test_profile->set_display_format('BAR_GRAPH');
 					}
-					else if($big_data_set > 0)
+					else if($big_data_set > 0 && pts_graph_core::get_graph_config('style', 'allow_box_plots'))
 					{
 						$result_object->test_profile->set_display_format('HORIZONTAL_BOX_PLOT');
 					}
@@ -242,11 +243,21 @@ class pts_render
 				$graph = new pts_graph_lines($result_object, $result_file, $extra_attributes);
 				break;
 			case 'HORIZONTAL_BOX_PLOT':
-				$graph = new pts_graph_box_plot($result_object, $result_file, $extra_attributes);
-				break;
+				if(pts_graph_core::get_graph_config('style', 'allow_box_plots'))
+				{
+					$graph = new pts_graph_box_plot($result_object, $result_file, $extra_attributes);
+					break;
+				}
 			case 'BAR_ANALYZE_GRAPH':
 			case 'BAR_GRAPH':
-				$graph = new pts_graph_horizontal_bars($result_object, $result_file, $extra_attributes);
+				if($horizontal_bars)
+				{
+					$graph = new pts_graph_horizontal_bars($result_object, $result_file, $extra_attributes);
+				}
+				else
+				{
+					$graph = new pts_graph_vertical_bars($result_object, $result_file, $extra_attributes);
+				}
 				break;
 			case 'PASS_FAIL':
 			case 'MULTI_PASS_FAIL':
@@ -269,7 +280,14 @@ class pts_render
 						$graph = new pts_graph_box_plot($result_object, $result_file, $extra_attributes);
 						break;
 					default:
-						$graph = new pts_graph_horizontal_bars($result_object, $result_file, $extra_attributes);
+						if($horizontal_bars)
+						{
+							$graph = new pts_graph_horizontal_bars($result_object, $result_file, $extra_attributes);
+						}
+						else
+						{
+							$graph = new pts_graph_vertical_bars($result_object, $result_file, $extra_attributes);
+						}
 						break;
 				}
 				break;
@@ -288,20 +306,24 @@ class pts_render
 		foreach($result_file->get_systems() as $s)
 		{
 			$json = $s->get_json();
+			$notes_string = $s->get_notes();
 			$identifier = $s->get_identifier();
 			$identifier_count++;
 
 			if(isset($json['kernel-parameters']) && $json['kernel-parameters'] != null)
 			{
 				$system_attributes['Kernel'][$identifier] = $json['kernel-parameters'];
+				unset($json['kernel-parameters']);
 			}
 			if(isset($json['environment-variables']) && $json['environment-variables'] != null)
 			{
 				$system_attributes['Environment'][$identifier] = $json['environment-variables'];
+				unset($json['environment-variables']);
 			}
 			if(isset($json['compiler-configuration']) && $json['compiler-configuration'] != null)
 			{
 				$system_attributes['Compiler'][$identifier] = $json['compiler-configuration'];
+				unset($json['compiler-configuration']);
 			}
 			if(isset($json['disk-scheduler']) && isset($json['disk-mount-options']))
 			{
@@ -309,11 +331,15 @@ class pts_render
 				if(isset($json['disk-details']) && !empty($json['disk-details']))
 				{
 					$system_attributes['Disk'][$identifier] .= ' / ' . $json['disk-details'];
+					unset($json['disk-details']);
 				}
+				unset($json['disk-scheduler']);
+				unset($json['disk-mount-options']);
 			}
 			if(isset($json['cpu-scaling-governor']))
 			{
 				$system_attributes['Processor'][$identifier] = 'Scaling Governor: ' . $json['cpu-scaling-governor'];
+				unset($json['cpu-scaling-governor']);
 			}
 			if(isset($json['graphics-2d-acceleration']) || isset($json['graphics-aa']) || isset($json['graphics-af']))
 			{
@@ -323,6 +349,7 @@ class pts_render
 					if(isset($json[$check]) && !empty($json[$check]))
 					{
 						$report[] = $json[$check];
+						unset($json[$check]);
 					}
 				}
 
@@ -331,6 +358,23 @@ class pts_render
 			if(isset($json['graphics-compute-cores']))
 			{
 				$system_attributes['OpenCL'][$identifier] = 'GPU Compute Cores: ' . $json['graphics-compute-cores'];
+				unset($json['graphics-compute-cores']);
+			}
+			if(!empty($notes_string))
+			{
+				$system_attributes['System'][$identifier] = $notes_string;
+			}
+
+			if(!empty($json) && is_array($json))
+			{
+				foreach($json as $key => $value)
+				{
+					if(!empty($value))
+					{
+						$system_attributes[ucwords(str_replace(array('_', '-'), ' ', $key))][$identifier] = $value;
+					}
+					unset($json[$key]);
+				}
 			}
 		}
 
@@ -473,6 +517,32 @@ class pts_render
 				break;
 		}
 
+		// Deduplicate the footnote if it's all the same across all tests
+		$same_footnote = null;
+		foreach($json as $identifier => &$data)
+		{
+			if(isset($data['install-footnote']) && $data['install-footnote'] != null)
+			{
+				if($same_footnote === null)
+				{
+					$same_footnote = $data['install-footnote'];
+					continue;
+				}
+
+				if($data['install-footnote'] != $same_footnote)
+				{
+					$same_footnote = null;
+					break;
+				}
+			}
+		}
+
+		if($same_footnote)
+		{
+			// Show the same footnote once rather than duplicated to all tests
+			$graph->addTestNote($same_footnote);
+		}
+
 		foreach($json as $identifier => &$data)
 		{
 			$graph_identifier_note = null;
@@ -490,7 +560,7 @@ class pts_render
 				$graph->addGraphIdentifierNote($identifier, $graph_identifier_note);
 			}
 
-			if(isset($data['install-footnote']) && $data['install-footnote'] != null)
+			if($same_footnote == null && isset($data['install-footnote']) && $data['install-footnote'] != null)
 			{
 				$graph->addTestNote($identifier . ': ' . $data['install-footnote']);
 			}

@@ -1,5 +1,101 @@
 PHORONIX TEST SUITE CHANGE-LOG
 
+Phoronix Test Suite (Git)
+
+phoromatic: Add a "email all users" option to the rootadmin page
+phoromatic: Improve search functionality on results page, allow boolean expressions, date ranges, many other search features
+phoromatic: Various search improvements to `phoronix-test-suite search`
+pts-core: Basic changes, should be all that's needed for EU GDPR safeguards
+
+Phoronix Test Suite 8.0.0 Milestone 3
+16 April 2018
+
+pts-core: Improvements for BSD / FreeBSD support
+pts-core: Add "V8" external dependency for V8 JavaScript engine
+pts-core: Add initial AdvertiseServiceOpenBenchmarkRelay support
+pts-core: Add new inspect-test-profile sub-command
+pts-core: Add ColoredConsole option in user configuration file of AUTO / TRUE / FALSE to control colored text behavior
+pts-core: Report each test's run-time to test-rin-times in result file XML
+pts-core: More XSD / OpenBenchmarking.org schema handling work for future functionality
+phoromatic: Ensure environment variables set via Phoromatic web interface get passed to tests
+phodevi: BSD improvements
+backup: A module providing initial backup/restore functionality for PTS/Phoromatic
+
+Phoronix Test Suite 8.0.0 Milestone 2
+24 March 2018
+
+pts-core: Add DeleteOutputBefore and DeleteOutputAfter options to the result parser
+pts-core: Fix for run-random-tests sub-command
+pts-core: Native XML result parsing support via FileFormat = XML in the result parser for test profiles
+pts-core: Add openbenchmarking-uploads sub-command for reporting recent result uploads from the local IP
+phodevi: reboot/shutdown support on Windows
+
+Phoronix Test Suite 8.0.0 Milestone 1
+8 March 2018
+
+pts-core: Rewritten Windows support
+pts-core: Add ~/install-message support where if a test profile installer writes there, that message will in turn be shown to the user on test install
+pts-core: Support for using Cygwin's bash interpreter on Windows systems for better test profile parsing support
+pts-core: When running on Windows, add new "windows/" OpenBenchmarking.org test repository
+pts-core: Introduce basic phoronix-test-suite shell for easier PTS experience
+pts-core: Allow XInclude support for test suites
+perf_per_dollar: Allow calculating cloud costs / perf-per via COST_PERF_PER_HOUR= environment variable
+phodevi: Cavium ThunderX detection
+
+Phoronix Test Suite 7.8.0-Folldal
+14 February 2018
+
+pts-core: Various minor fixes
+pts_Graph: Fix vertical bar graphs on many bars to be rendered
+
+Phoronix Test Suite 7.8.0 Milestone 3
+5 February 2018
+
+pts-core: Fix crash in stress-run when PHP PCNTL is missing
+pts-core: When installing a test that is marked deprecated/experimental/broken, ensure to convey that to the user
+pts-core: When installing a test that is of license retail/restricted, ensure to convey that to the user
+pts-core: Don't show tests in `list-available-tests` / `list-tests` that are not verified
+pts-core: Improvements to `info` sub-command for test profiles in highlighting tests that may have problems and also show pre/post messages
+pts_Graph: Fix when manually forcing line graphs sometimes still yielding bar graphs
+phodevi: spectre_v1 and spectre_v2 protection reporting
+phodevi: LXQt desktop detection
+phodevi: Don't cache the compiler in case external dependencies install a new compiler, etc
+
+Phoronix Test Suite 7.8.0 Milestone 2
+14 January 2018
+
+pts-core: Allow local/other tests not part of OpenBenchmarking.org to be downloaded from a Phoromatic Server
+pts-core: Fixes for make-download-cache sometimes not caching tests/suites
+pts-core: Drop the pts_test_notes_manager since pts_test_run_manager already had better capabilities built-in
+pts-core: Add dump-phodevi-properties helper to assist in debugging and porting to new platforms
+pts-core: Interactive mode improvements
+pts-core: The `phoronix-test-suite gui` has been unmaintained and can be considered deprecated
+pts-core: Add `phoronix-test-suite search` for conducting basic searches from the CLI
+pts-core: When running `phoronix-test-suite info <test profile>`, show the OpenBenchmarking.org change-log for that test profile too
+pts-core: When running `phoronix-test-suite info <test profile>`, show local test results containing this test
+phodevi: Append BIOS version to end of motherboard string
+phodevi: Strip invalid chars from BIOS version parsing
+phodevi: Reworked property handling
+phodevi: KDE Plasma 5 detection improvements
+pts_Graph: Add allow_box_plots graph configuration tunable
+pts_Graph: Restore support for allowing vertical bar graphs, can be enabled by editing graph-config.json with bar_graphs_horizontal = false
+
+Phoronix Test Suite 7.8.0 Milestone 1
+8 January 2018
+
+pts-core: Add meson to external dependencies
+pts-core: Other external dependency updates
+pts-core: Various minor improvements when running on Docker/containerized
+pts-core: Phoroscript interpreter improvements for Windows
+pts-core: Allow PTS_WEBSOCKET_PORT environment variable to be used to override WebSocket port when launching Phoromatic Server
+phodevi: Add some missing handling around /dev/vd* disks
+phodevi: Add BIOS version reporting property
+
+Phoronix Test Suite 7.6.0-Alvdal
+7 December 2017
+
+pts-core: Just minor changes
+
 Phoronix Test Suite 7.6.0 Milestone 4
 3 December 2017
 

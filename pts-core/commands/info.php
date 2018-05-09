@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2017, Phoronix Media
-	Copyright (C) 2008 - 2017, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -71,6 +71,16 @@ class info implements pts_option_interface
 				}
 
 				pts_client::$display->generic_heading($test_title);
+
+				if($o->get_license() == 'Retail' || $o->get_license() == 'Restricted')
+				{
+					echo pts_client::cli_just_bold(strtoupper('NOTE: This test profile is marked \'' . $o->get_license() . '\' and may have issues running without third-party/commercial dependencies.')) . PHP_EOL . PHP_EOL;
+				}
+				if($o->get_status() != 'Verified')
+				{
+					echo pts_client::cli_just_bold(strtoupper('NOTE: This test profile is marked \'' . $o->get_status() . '\' and may have known issues with test installation or execution.')) . PHP_EOL . PHP_EOL;
+				}
+
 				$table = array();
 				$table[] = array(pts_client::cli_just_bold('Run Identifier: '), $o->get_identifier());
 				$table[] = array(pts_client::cli_just_bold('Profile Version: '), $o->get_test_profile_version());
@@ -79,6 +89,7 @@ class info implements pts_option_interface
 				$table[] = array(pts_client::cli_just_bold('Software Type: '), $o->get_test_software_type());
 				$table[] = array(pts_client::cli_just_bold('License Type: '), $o->get_license());
 				$table[] = array(pts_client::cli_just_bold('Test Status: '), $o->get_status());
+				$table[] = array(pts_client::cli_just_bold('Supported Platforms: '), implode(', ', $o->get_supported_platforms()));
 				$table[] = array(pts_client::cli_just_bold('Project Web-Site: '), $o->get_project_url());
 
 				if($o->get_estimated_run_time() > 1)
@@ -100,7 +111,20 @@ class info implements pts_option_interface
 
 				echo pts_user_io::display_text_table($table);
 
-				echo PHP_EOL . PHP_EOL . pts_client::cli_just_bold('Description: ') . $o->get_description() . PHP_EOL. PHP_EOL;
+				echo PHP_EOL . PHP_EOL . pts_client::cli_just_bold('Description: ') . $o->get_description() . PHP_EOL;
+
+				if(stripos($o->get_identifier(0), 'local/') === false)
+				{
+					echo PHP_EOL . PHP_EOL . pts_client::cli_just_bold('OpenBenchmarking.org Test Profile: ') . 'https://openbenchmarking.org/test/' . $o->get_identifier() . PHP_EOL . PHP_EOL;
+				}
+
+				foreach(array('Pre-Install Message' => $o->get_pre_install_message(), 'Post-Install Message' => $o->get_post_install_message(), 'Pre-Run Message' => $o->get_pre_run_message(), 'Post-Run Message' => $o->get_post_run_message()) as $msg_type => $msg)
+				{
+					if($msg != null)
+					{
+						echo PHP_EOL . pts_client::cli_just_bold($msg_type . ': ') . $msg . PHP_EOL. PHP_EOL;
+					}
+				}
 
 				if($o->test_installation != false)
 				{
@@ -147,6 +171,47 @@ class info implements pts_option_interface
 					echo pts_user_io::display_text_list($o->get_dependency_names());
 				}
 				echo PHP_EOL;
+
+
+
+				// OpenBenchmarking.org Change-Log
+				if(stripos($o->get_identifier(), 'local/') === false)
+				{
+
+					$change_log = pts_openbenchmarking_client::fetch_repository_test_profile_changelog($o->get_identifier(false));
+
+					if(is_array($change_log) && isset($change_log['tests'][$o->get_identifier_base_name()]['changes']))
+					{
+						echo pts_client::cli_just_bold('OpenBenchmarking.org Change History') . PHP_EOL;
+						$change_log = $change_log['tests'][$o->get_identifier_base_name()]['changes'];
+						foreach($change_log as $version => $data)
+						{
+							echo pts_client::cli_colored_text('v' . $version . ' - ' . date('j F Y', $data['last_updated']), 'green', true) . PHP_EOL;
+							echo $data['commit_description'] . PHP_EOL;
+						}
+					}
+				}
+
+				// Recent Test Results With This Test
+				$o_identifier = $o->get_identifier(false);
+				$table = array();
+				foreach(pts_client::saved_test_results() as $saved_results_identifier)
+				{
+					$result_file = new pts_result_file($saved_results_identifier);
+					foreach($result_file->get_result_objects() as $result_object)
+					{
+						if($result_object->test_profile->get_identifier(false) == $o_identifier)
+						{
+							$table[] = array(pts_client::cli_just_bold($result_file->get_identifier()), $result_file->get_title());
+							break;
+						}
+					}
+				}
+				if(!empty($table))
+				{
+					echo PHP_EOL . pts_client::cli_just_bold('Results Containing This Test') . PHP_EOL;
+					echo pts_user_io::display_text_table($table);
+				}
 			}
 			else if($o instanceof pts_result_file)
 			{

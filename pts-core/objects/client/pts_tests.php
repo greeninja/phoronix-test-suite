@@ -3,8 +3,8 @@
 /*
 	Phoronix Test Suite
 	URLs: http://www.phoronix.com, http://www.phoronix-test-suite.com/
-	Copyright (C) 2008 - 2017, Phoronix Media
-	Copyright (C) 2008 - 2017, Michael Larabel
+	Copyright (C) 2008 - 2018, Phoronix Media
+	Copyright (C) 2008 - 2018, Michael Larabel
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -22,6 +22,15 @@
 
 class pts_tests
 {
+	public static $extra_env_vars = null;
+	public static function add_extra_env_var($name, $value)
+	{
+		self::$extra_env_vars[$name] = $value;
+	}
+	public static function clear_extra_env_vars()
+	{
+		self::$extra_env_vars = array();
+	}
 	public static function installed_tests()
 	{
 		$cleaned_tests = array();
@@ -72,7 +81,7 @@ class pts_tests
 	{
 		$error = null;
 
-		foreach(array('fatal error', 'error:', 'error while loading', 'undefined reference', 'returned 1 exit status', 'not found', 'child process excited with status', 'error opening archive', 'failed to load') as $error_string)
+		foreach(array('fatal error', 'error:', 'error while loading', 'undefined reference', 'returned 1 exit status', 'not found', 'child process excited with status', 'error opening archive', 'failed to load', 'fatal', 'illegal argument') as $error_string)
 		{
 			if(($e = strripos($log_file, $error_string)) !== false)
 			{
@@ -147,7 +156,14 @@ class pts_tests
 	public static function extra_environmental_variables(&$test_profile)
 	{
 		$extra_vars = array();
+
+		if(is_array(self::$extra_env_vars))
+		{
+			$extra_vars = self::$extra_env_vars;
+		}
+
 		$extra_vars['HOME'] = $test_profile->get_install_dir();
+		$extra_vars['DEBUG_HOME'] = $test_profile->get_install_dir();
 		$extra_vars['PATH'] = "\$PATH";
 		$extra_vars['LC_ALL'] = '';
 		$extra_vars['LC_NUMERIC'] = '';
@@ -204,7 +220,14 @@ class pts_tests
 			$test_profiles = array_merge($test_profiles, $test_profile->extended_test_profiles());
 		}
 
-		if(pts_client::executable_in_path('bash'))
+		$use_phoroscript = phodevi::is_windows();
+		if(phodevi::is_windows() && is_executable('C:\cygwin64\bin\bash.exe'))
+		{
+			$sh = 'C:\cygwin64\bin\bash.exe';
+			$use_phoroscript = false;
+			$extra_vars['PATH'] = $extra_vars['PATH'] . ';C:\cygwin64\bin';
+		}
+		else if(pts_client::executable_in_path('bash'))
 		{
 			$sh = 'bash';
 		}
@@ -224,15 +247,32 @@ class pts_tests
 					pts_client::$display->test_run_message($print_string);
 				}
 
-				if(phodevi::is_windows() || pts_client::read_env('USE_PHOROSCRIPT_INTERPRETER') != false)
+				if($use_phoroscript || pts_client::read_env('USE_PHOROSCRIPT_INTERPRETER') != false)
 				{
+					echo PHP_EOL . 'Falling back to experimental PhoroScript code path...' . PHP_EOL;
 					$phoroscript = new pts_phoroscript_interpreter($run_file, $extra_vars, $test_directory);
 					$phoroscript->execute_script($pass_argument);
 					$this_result = null;
 				}
+				else if(phodevi::is_windows())
+				{
+					$host_env = $_SERVER;
+					unset($host_env['argv']);
+					$descriptorspec = array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
+					$test_process = proc_open($sh . ' ' . $run_file . ' ' . $pass_argument . (phodevi::is_windows() && false ? '' : ' 2>&1'), $descriptorspec, $pipes, $test_directory, array_merge($host_env, pts_client::environmental_variables(), $extra_vars));
+
+					if(is_resource($test_process))
+					{
+						//echo proc_get_status($test_process)['pid'];
+						$this_result = stream_get_contents($pipes[1]);
+						fclose($pipes[1]);
+						fclose($pipes[2]);
+						$return_value = proc_close($test_process);
+					}
+				}
 				else
 				{
-					$this_result = pts_client::shell_exec('cd ' .  $test_directory . ' && ' . $sh . ' ' . $run_file . ' ' . $pass_argument . ' 2>&1', $extra_vars);
+					$this_result = pts_client::shell_exec('cd ' .  $test_directory . (phodevi::is_windows() ? '; ' : ' && ') . $sh . ' ' . $run_file . ' ' . $pass_argument . (phodevi::is_windows() ? '' : ' 2>&1'), $extra_vars);
 				}
 
 				if(trim($this_result) != null)
@@ -308,49 +348,88 @@ class pts_tests
 	{
 		$showed_recent_results = self::recently_saved_results();
 
+		if(count($result_uploads = pts_openbenchmarking::result_uploads_from_this_ip()) > 0)
+		{
+			echo PHP_EOL . pts_client::cli_just_bold('Recent OpenBenchmarking.org Results From This IP:') . PHP_EOL;
+			$t = array();
+			foreach($result_uploads as $id => $title)
+			{
+				$t[] = array(pts_client::cli_colored_text($id, 'gray', true), $title);
+
+				if(count($t) == 6)
+				{
+					break;
+				}
+			}
+			echo pts_user_io::display_text_table($t, '- ') . PHP_EOL . PHP_EOL;
+		}
+
+		$similar_tests = array();
 		if(!empty($passed_args))
 		{
-			$arg_soundex = soundex($passed_args);
-			$similar_tests = array();
-
-			foreach(pts_openbenchmarking::linked_repositories() as $repo)
+			foreach(pts_arrays::to_array($passed_args) as $passed_arg)
 			{
-				$repo_index = pts_openbenchmarking::read_repository_index($repo);
+				$arg_soundex = soundex($passed_arg);
+				$arg_save_identifier_like = pts_test_run_manager::clean_save_name($passed_arg);
 
-				foreach(array('tests', 'suites') as $type)
+				foreach(pts_openbenchmarking::linked_repositories() as $repo)
 				{
-					if(isset($repo_index[$type]) && is_array($repo_index[$type]))
+					$repo_index = pts_openbenchmarking::read_repository_index($repo);
+
+					foreach(array('tests', 'suites') as $type)
 					{
-						foreach(array_keys($repo_index[$type]) as $identifier)
+						if(isset($repo_index[$type]) && is_array($repo_index[$type]))
 						{
-							if(soundex($identifier) == $arg_soundex)
+							foreach(array_keys($repo_index[$type]) as $identifier)
 							{
-								$similar_tests[] = array('- ' . $repo . '/' . $identifier, ' [' . ucwords(substr($type, 0, -1)) . ']');
+								if(soundex($identifier) == $arg_soundex)
+								{
+									pts_arrays::unique_push($similar_tests, array($identifier, ' [' . ucwords(substr($type, 0, -1)) . ']'));
+								}
+								else if(isset($passed_arg[3]) && strpos($identifier, $passed_arg) !== false)
+								{
+									pts_arrays::unique_push($similar_tests, array($identifier, ' [' . ucwords(substr($type, 0, -1)) . ']'));
+								}
 							}
 						}
 					}
 				}
-			}
 
-			foreach(pts_client::saved_test_results() as $result)
-			{
-				if(soundex($result) == $arg_soundex)
+				foreach(pts_client::saved_test_results() as $result)
 				{
-					$similar_tests[] = array('- ' . $result, ' [Test Result]');
+					if(soundex($result) == $arg_soundex || (isset($passed_arg[3]) && strpos($identifier, $arg_save_identifier_like) !== false))
+					{
+						pts_arrays::unique_push($similar_tests, array($result, ' [Test Result]'));
+					}
+				}
+
+				if(strpos($passed_arg, '-') !== false)
+				{
+					$possible_identifier = str_replace('-', '', $passed_arg);
+					if(pts_test_profile::is_test_profile($possible_identifier))
+					{
+						pts_arrays::unique_push($similar_tests, array($possible_identifier, ' [Test]'));
+					}
+				}
+				if($passed_arg != ($possible_identifier = strtolower($passed_arg)))
+				{
+					if(pts_test_profile::is_test_profile($possible_identifier))
+					{
+						pts_arrays::unique_push($similar_tests, array($possible_identifier, ' [Test]'));
+					}
 				}
 			}
-
-			if(count($similar_tests) > 0)
+		}
+		if(count($similar_tests) > 0)
+		{
+			echo pts_client::cli_just_bold('Possible Suggestions:') . PHP_EOL;
+			//$similar_tests = array_unique($similar_tests);
+			if(isset($similar_tests[12]))
 			{
-				echo 'Possible Suggestions:' . PHP_EOL;
-
-				if(isset($similar_tests[12]))
-				{
-					// lots of tests... trim it down
-					$similar_tests = array_rand($similar_tests, 12);
-				}
-				echo pts_user_io::display_text_table($similar_tests) . PHP_EOL . PHP_EOL;
+				// lots of tests... trim it down
+				$similar_tests = array_rand($similar_tests, 12);
 			}
+			echo pts_user_io::display_text_table($similar_tests, '- ') . PHP_EOL . PHP_EOL;
 		}
 
 		if($showed_recent_results == false)
@@ -358,7 +437,7 @@ class pts_tests
 			echo 'See available tests to run by visiting OpenBenchmarking.org or running:' . PHP_EOL . PHP_EOL;
 			echo '    phoronix-test-suite list-tests' . PHP_EOL . PHP_EOL;
 			echo 'Tests can be installed by running:' . PHP_EOL . PHP_EOL;
-			echo '    phoronix-test-suite install <test-name>' . PHP_EOL;
+			echo '    phoronix-test-suite install <test-name>' . PHP_EOL . PHP_EOL;
 		}
 	}
 	public static function recently_saved_results()
