@@ -241,7 +241,8 @@ class pts_network
 		// {
 			// $parameters['http']['proxy'] = 'tcp://' . $proxy_address . ':' . $proxy_port;
 			// $parameters['http']['request_fulluri'] = true;
-			$parameters['http']['proxy'] = 'tcp://100.64.0.26:3128';
+			$parameters['http']['proxy'] = 'tcp://proxy:3128';
+			$parameters['http']['request_fulluri'] = true;
 		//}
 
 		if(is_numeric($http_timeout) && $http_timeout > 1)
